@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime, timezone
+import json
 
 
 def get_connection(db_path):
@@ -23,6 +24,24 @@ def init_db(conn):
             tone TEXT,
             status TEXT NOT NULL DEFAULT 'idea',
             archived_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS drafts (
+            id INTEGER PRIMARY KEY,
+            idea_id INTEGER NOT NULL REFERENCES ideas(id),
+            round INTEGER NOT NULL,
+            caption TEXT NOT NULL,
+            slides TEXT NOT NULL,
+            quality_flags TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS api_calls (
+            id INTEGER PRIMARY KEY,
+            idea_id INTEGER REFERENCES ideas(id),
+            function TEXT NOT NULL,
+            tokens_in INTEGER NOT NULL,
+            tokens_out INTEGER NOT NULL,
+            estimated_cost_usd REAL NOT NULL,
+            created_at TEXT NOT NULL
         );
         """
     )
@@ -82,3 +101,61 @@ def hard_delete_idea(conn, idea_id):
 def update_idea_status(conn, idea_id, status):
     conn.execute("UPDATE ideas SET status = ? WHERE id = ?", (status, idea_id))
     conn.commit()
+
+
+def create_draft(conn, idea_id, round_, caption, slides, quality_flags=None):
+    cursor = conn.execute(
+        "INSERT INTO drafts (idea_id, round, caption, slides, quality_flags, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (idea_id, round_, caption, json.dumps(slides), json.dumps(quality_flags or []), _now()),
+    )
+    conn.commit()
+    return cursor.lastrowid
+
+
+def list_drafts_for_idea(conn, idea_id):
+    rows = conn.execute(
+        "SELECT * FROM drafts WHERE idea_id = ? ORDER BY round ASC", (idea_id,)
+    ).fetchall()
+    result = []
+    for row in rows:
+        d = dict(row)
+        d["slides"] = json.loads(d["slides"])
+        d["quality_flags"] = json.loads(d["quality_flags"]) if d["quality_flags"] else []
+        result.append(d)
+    return result
+
+
+def log_api_call(conn, function, tokens_in, tokens_out, estimated_cost_usd, idea_id=None):
+    conn.execute(
+        "INSERT INTO api_calls (idea_id, function, tokens_in, tokens_out, estimated_cost_usd, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (idea_id, function, tokens_in, tokens_out, estimated_cost_usd, _now()),
+    )
+    conn.commit()
+
+
+def get_spend_since(conn, since_iso):
+    row = conn.execute(
+        "SELECT COALESCE(SUM(estimated_cost_usd), 0) AS total FROM api_calls WHERE created_at >= ?",
+        (since_iso,),
+    ).fetchone()
+    return row["total"]
+
+
+def get_spend_today(conn):
+    start_of_day = (
+        datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    )
+    return get_spend_since(conn, start_of_day)
+
+
+def get_spend_this_month(conn):
+    start_of_month = datetime.now(timezone.utc).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    ).isoformat()
+    return get_spend_since(conn, start_of_month)
+
+
+def would_exceed_daily_cap(conn, estimated_call_cost, daily_cap_usd):
+    return (get_spend_today(conn) + estimated_call_cost) > daily_cap_usd
