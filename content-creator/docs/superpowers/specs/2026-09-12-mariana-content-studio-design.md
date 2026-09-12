@@ -47,10 +47,10 @@ A **learning project**: build a small, understandable, real piece of software (n
 
 ## Architecture
 
-Project lives inside this repo:
+Project lives in its own subfolder of this repo, `content-creator/`, kept separate from the repo root so this "learning" repo can hold multiple independent projects over time:
 
 ```
-mariana-content-studio/
+content-creator/
   app.py            Streamlit UI — the flow above, wired together
   ai.py             Claude API calls: extract_topics, generate_draft, critique_draft, revise_draft
   db.py             SQLite schema + CRUD (ideas, drafts, api_calls)
