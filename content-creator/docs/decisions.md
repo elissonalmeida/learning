@@ -14,6 +14,14 @@ Format for each entry:
 
 ---
 
+## 2026-09-12 — AI-slop patterns folded into the brand pack itself, not just a session skill
+
+**What:** Installed the `unslop` skill for this Claude Code session, but also added anti-pattern 13 and quality-criteria Critério 11 directly into the `marianabotelho-ig` brand pack (in the spec's Appendix, since Task 1 hasn't run yet) — em-dash-as-connector, "não só X mas também Y", forced rule of three, empty AI vocabulary, promotional adjectives, filler, generic conclusions.
+**Why:** the `unslop` Claude Code skill only improves prose *I* write in this session (docs, commit messages, prompt prototyping). It has no effect on the deployed app, because `ai.py`'s `critique_draft` calls the Claude API directly with only `quality-criteria.md`/`anti-patterns.md` as context — it never sees Claude Code's installed skills. Better text only in this chat and not in Mariana's actual captions would defeat the point.
+**Cost if wrong / what to watch for:** if a future brand pack (a second niche) is added, remember to carry equivalent AI-slop checks into its own quality-criteria.md/anti-patterns.md too — they don't come "for free" from the engine code, since brand packs are intentionally self-contained.
+
+---
+
 ## 2026-09-12 — GitHub Projects (boards) needs a classic token, not fine-grained
 
 **What:** Authenticated `gh` CLI with a classic personal access token (`repo` + `project` + `read:org` scopes) instead of the fine-grained token created first.
