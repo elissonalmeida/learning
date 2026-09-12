@@ -587,7 +587,7 @@ Não alterar. Não substituir. Nunca omitir.
 
 ### quality-criteria.md
 
-> The 10 pass/fail checks the critique pass runs against every draft.
+> The 11 pass/fail checks the critique pass runs against every draft.
 
 ```markdown
 # Critérios de Qualidade — @marianabotelho.pt
@@ -777,6 +777,25 @@ Todo o conteúdo produzido por este squad é avaliado contra os seguintes crité
 
 ---
 
+## Critério 11 — Ausência de Padrões Genéricos de IA (OBRIGATÓRIO)
+
+**Pergunta:** O texto evita os tiques reconhecíveis de escrita gerada por IA?
+
+**Checklist:**
+- [ ] Sem travessão como conector de ideias no meio de frases (rótulos estruturais como "Slide 1 — HOOK" são permitidos; travessões dentro do corpo da legenda não são)
+- [ ] Sem construção "não só X, mas também Y"
+- [ ] Sem regra de três forçada (grupos de três criados artificialmente onde o número natural seria outro)
+- [ ] Sem vocabulário abstracto-vazio: "crucial", "fundamental" (como reforço vazio), "fomentar", "moldar" (abstracto), "impulsionar" (abstracto), "capacitar", "sinergia", "panorama"/"cenário" (abstracto), "mergulhar", "testemunho de"
+- [ ] Sem adjectivos promocionais vazios sem substância concreta a seguir ("incrível", "revolucionário", "imperdível", "deslumbrante")
+- [ ] Sem enchimento ("é importante notar que", "de forma a", "devido ao facto de que")
+- [ ] Sem conclusões genéricas que serviriam para qualquer conta de bem-estar sem alteração
+
+**Teste rápido:** ler a legenda em voz alta e perguntar "isto podia ter sido escrito por qualquer conta genérica de bem-estar, sem nada da voz da Mariana?" Se sim, falha.
+
+**Avaliação:** PASSA / FALHA (listar correcções — ver anti-padrão 13 em `anti-patterns.md`)
+
+---
+
 ## Resumo da Avaliação
 
 | Critério | Tipo | Responsável |
@@ -791,6 +810,7 @@ Todo o conteúdo produzido por este squad é avaliado contra os seguintes crité
 | 8. Assinatura da Marca | OBRIGATÓRIO | Renata |
 | 9. Hashtags | OBRIGATÓRIO | Renata |
 | 10. Consistência de Tom | ORIENTAÇÃO | Renata |
+| 11. Ausência de Padrões Genéricos de IA | OBRIGATÓRIO | Renata |
 
 **Regra de aprovação:** Todos os critérios OBRIGATÓRIOS devem ter PASSA para avançar para a Mariana. O Critério 10 é orientação — falhar não bloqueia, mas deve ser corrigido.
 ```
@@ -930,6 +950,39 @@ Este documento lista os erros que NUNCA devem aparecer no conteúdo produzido pa
 
 ---
 
+### 13. Padrões genéricos de escrita de IA ("AI slop")
+**Problema:** Texto gerado por IA tem tiques reconhecíveis que sinalizam "isto foi escrito por um robô" a qualquer leitor treinado a reconhecê-los — e cada vez mais leitores reconhecem. Isto destrói a credencial de autenticidade que é o maior diferenciador da Mariana.
+
+**Travessão em excesso no corpo do texto.** Frases como "Slide 1 — HOOK" (rótulo estrutural) estão bem; travessões dentro do corpo da legenda como conector de ideias são um tique de IA.
+**Exemplo errado:** "A lavanda acalma — não porque seja mágica — mas porque actua no sistema nervoso."
+**Alternativa correcta:** "A lavanda acalma. Não porque seja mágica, mas porque actua no sistema nervoso."
+
+**"Não só X, mas também Y."**
+**Exemplo errado:** "Não só relaxa o corpo, mas também acalma a mente."
+**Alternativa correcta:** "Relaxa o corpo e acalma a mente." (ou escolher só o ponto mais forte)
+
+**Regra de três forçada** — agrupar tudo em conjuntos de três mesmo quando o número natural é outro.
+**Exemplo errado:** "Uma planta rigorosa, calorosa e transformadora."
+**Alternativa correcta:** "Uma planta rigorosa e calorosa." (ou só um adjectivo, se for o que a frase pede)
+
+**Vocabulário de IA / abstracto-vazio.** "crucial", "fundamental" (usado como reforço vazio), "fomentar", "moldar" (abstracto), "impulsionar" (abstracto), "capacitar", "sinergia", "panorama"/"cenário" (abstracto), "mergulhar" (no sentido de "explorar em profundidade"), "testemunho de", "reforça a importância de".
+**Exemplo errado:** "Este ritual é fundamental para fomentar o teu bem-estar e moldar uma nova relação com o corpo."
+**Alternativa correcta:** "Este ritual muda a forma como sentes o teu corpo."
+
+**Adjectivos promocionais vazios** — sobreposto ao anti-padrão 6 (estética de stock photo), mas aplicado à escolha de palavras: "incrível", "revolucionário", "imperdível", "deslumbrante" sem substância concreta a seguir.
+**Exemplo errado:** "Este óleo essencial é absolutamente incrível!"
+**Alternativa correcta:** nomear o mecanismo ou o efeito concreto, sem o adjectivo.
+
+**Enchimento.** "É importante notar que", "de forma a", "devido ao facto de que" — cortar sem perda de sentido.
+
+**Conclusões genéricas** que poderiam aparecer em qualquer post de qualquer marca sem alteração.
+**Exemplo errado:** "O futuro do bem-estar é promissor."
+**Alternativa correcta:** um facto, plano ou convite específico.
+
+**Alternativa correcta (regra geral):** ler a legenda em voz alta e perguntar "isto podia ter sido escrito por qualquer conta genérica de bem-estar, sem nada da voz da Mariana?" Se sim, reescrever com um dos 6 tons de `tone-of-voice.md` até deixar de ser verdade.
+
+---
+
 ## SEMPRE FAZER
 
 ### 1. Verificar "reiki" em todas as ocorrências (texto + hashtags)
@@ -952,6 +1005,9 @@ Antes de entregar posts sobre doenças, sintomas ou condições de saúde, rever
 
 ### 7. Contar hashtags (5-8) e verificar ortografia
 Especialmente: #reiki (nunca #reike), #terapiasholísticas (com acento), #farmaceuticaholistica.
+
+### 8. Ler a legenda à procura de tiques de escrita de IA
+Travessões no meio de frases, "não só X mas também Y", regra de três forçada, vocabulário abstracto-vazio (crucial, fomentar, moldar, sinergia), adjectivos promocionais sem substância, enchimento, conclusões genéricas. Ver anti-padrão 13.
 ```
 
 ### output-examples.md
