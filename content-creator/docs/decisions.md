@@ -14,6 +14,14 @@ Format for each entry:
 
 ---
 
+## 2026-09-12 — Narrowed the em-dash anti-pattern after it conflicted with the brand's own voice
+
+**What:** Live-tested `generate_draft` on a new topic ("óleo essencial de gerânio para equilíbrio hormonal") before writing any app code, per Task 6. The output used an em-dash for a short clarifying aside ("...pelo nervo olfactivo — a mesma via da lavanda"), which the just-added anti-pattern 13 would have flagged as an AI tell — except the brand's own official `output-examples.md` uses em-dashes exactly that way ("Não é magia — é a regulação do eixo parassimpático."). Narrowed the rule in `anti-patterns.md`, `quality-criteria.md` Critério 11, and the spec appendix: only ban em-dash used as a substitute for a logical connector ("porque"/"mas"/"então") joining two clauses; explicitly allow short apposition/clarification, with the brand's own examples cited as the permitted case.
+**Why:** a rule copied from a general-purpose AI-writing guide doesn't automatically fit a specific brand's authentic style — this brand's voice already leans on em-dashes as a stylistic device. Without live-testing the actual prompt against real brand content before locking it into the pipeline, this false positive would have shipped silently and fought the brand voice on every single critique pass.
+**Cost if wrong / what to watch for:** if the narrowed rule turns out too permissive (lets real AI-tell em-dash chains through), the tell to watch for is 2+ em-dashes in one sentence/caption doing connector work — a frequency cap is the fallback option that was considered and set aside in favor of this semantic distinction.
+
+---
+
 ## 2026-09-12 — AI-slop patterns folded into the brand pack itself, not just a session skill
 
 **What:** Installed the `unslop` skill for this Claude Code session, but also added anti-pattern 13 and quality-criteria Critério 11 directly into the `marianabotelho-ig` brand pack (in the spec's Appendix, since Task 1 hasn't run yet) — em-dash-as-connector, "não só X mas também Y", forced rule of three, empty AI vocabulary, promotional adjectives, filler, generic conclusions.

@@ -190,7 +190,7 @@ Todo o conteúdo produzido por este squad é avaliado contra os seguintes crité
 **Pergunta:** O texto evita os tiques reconhecíveis de escrita gerada por IA?
 
 **Checklist:**
-- [ ] Sem travessão como conector de ideias no meio de frases (rótulos estruturais como "Slide 1 — HOOK" são permitidos; travessões dentro do corpo da legenda não são)
+- [ ] Sem travessão a substituir um conector lógico ("porque", "mas", "então") no meio de uma frase — travessão para aposição/clarificação curta é permitido e é autêntico da marca (ex: "a mesma via da lavanda")
 - [ ] Sem construção "não só X, mas também Y"
 - [ ] Sem regra de três forçada (grupos de três criados artificialmente onde o número natural seria outro)
 - [ ] Sem vocabulário abstracto-vazio: "crucial", "fundamental" (como reforço vazio), "fomentar", "moldar" (abstracto), "impulsionar" (abstracto), "capacitar", "sinergia", "panorama"/"cenário" (abstracto), "mergulhar", "testemunho de"

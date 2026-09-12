@@ -782,7 +782,7 @@ Todo o conteúdo produzido por este squad é avaliado contra os seguintes crité
 **Pergunta:** O texto evita os tiques reconhecíveis de escrita gerada por IA?
 
 **Checklist:**
-- [ ] Sem travessão como conector de ideias no meio de frases (rótulos estruturais como "Slide 1 — HOOK" são permitidos; travessões dentro do corpo da legenda não são)
+- [ ] Sem travessão a substituir um conector lógico ("porque", "mas", "então") no meio de uma frase — travessão para aposição/clarificação curta é permitido e é autêntico da marca (ex: "a mesma via da lavanda")
 - [ ] Sem construção "não só X, mas também Y"
 - [ ] Sem regra de três forçada (grupos de três criados artificialmente onde o número natural seria outro)
 - [ ] Sem vocabulário abstracto-vazio: "crucial", "fundamental" (como reforço vazio), "fomentar", "moldar" (abstracto), "impulsionar" (abstracto), "capacitar", "sinergia", "panorama"/"cenário" (abstracto), "mergulhar", "testemunho de"
@@ -953,9 +953,10 @@ Este documento lista os erros que NUNCA devem aparecer no conteúdo produzido pa
 ### 13. Padrões genéricos de escrita de IA ("AI slop")
 **Problema:** Texto gerado por IA tem tiques reconhecíveis que sinalizam "isto foi escrito por um robô" a qualquer leitor treinado a reconhecê-los — e cada vez mais leitores reconhecem. Isto destrói a credencial de autenticidade que é o maior diferenciador da Mariana.
 
-**Travessão em excesso no corpo do texto.** Frases como "Slide 1 — HOOK" (rótulo estrutural) estão bem; travessões dentro do corpo da legenda como conector de ideias são um tique de IA.
-**Exemplo errado:** "A lavanda acalma — não porque seja mágica — mas porque actua no sistema nervoso."
+**Travessão como substituto de conector lógico ("porque", "mas", "então") no meio de uma frase.** Isto é diferente de usar o travessão para uma aposição ou clarificação curta — que é uma marca genuína da voz da Mariana e aparece nos próprios exemplos aprovados (ex: "Não é magia — é a regulação do eixo parassimpático." em `output-examples.md`). O tique de IA é usar o travessão para LIGAR duas ideias que deviam ser ligadas por uma conjunção ou separadas por um ponto — não para pausar e esclarecer o que já foi dito.
+**Exemplo errado (travessão como conector lógico, substitui "mas"/vírgulas):** "A lavanda acalma — não porque seja mágica — mas porque actua no sistema nervoso."
 **Alternativa correcta:** "A lavanda acalma. Não porque seja mágica, mas porque actua no sistema nervoso."
+**Exemplo permitido (aposição/clarificação curta — mantém o som autêntico da marca):** "Os compostos chegam ao sistema límbico pelo nervo olfactivo — a mesma via da lavanda." / "Não é magia — é a regulação do eixo parassimpático."
 
 **"Não só X, mas também Y."**
 **Exemplo errado:** "Não só relaxa o corpo, mas também acalma a mente."
@@ -1007,7 +1008,7 @@ Antes de entregar posts sobre doenças, sintomas ou condições de saúde, rever
 Especialmente: #reiki (nunca #reike), #terapiasholísticas (com acento), #farmaceuticaholistica.
 
 ### 8. Ler a legenda à procura de tiques de escrita de IA
-Travessões no meio de frases, "não só X mas também Y", regra de três forçada, vocabulário abstracto-vazio (crucial, fomentar, moldar, sinergia), adjectivos promocionais sem substância, enchimento, conclusões genéricas. Ver anti-padrão 13.
+Travessão a substituir um conector lógico (não a aposição/clarificação curta, essa é permitida), "não só X mas também Y", regra de três forçada, vocabulário abstracto-vazio (crucial, fomentar, moldar, sinergia), adjectivos promocionais sem substância, enchimento, conclusões genéricas. Ver anti-padrão 13.
 ```
 
 ### output-examples.md
