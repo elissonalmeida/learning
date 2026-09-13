@@ -176,3 +176,94 @@ def test_run_extraction_raises_when_daily_cap_already_reached(conn):
             client=None, conn=conn, reference_text="texto qualquer",
             brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
         )
+
+
+def test_on_step_reports_running_then_done_for_each_call(conn, idea):
+    fake_ai = make_fake_ai_module(critique_sequence=[[]])
+    events = []
+    pipeline.run_generation_pipeline(
+        client=None, conn=conn, idea=idea, tone="Educativo-Científico",
+        brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+        on_step=lambda step, status, detail=None: events.append((step, status)),
+    )
+    assert events == [
+        ("generate_draft", "running"),
+        ("generate_draft", "done"),
+        ("critique_draft", "running"),
+        ("critique_draft", "done"),
+    ]
+
+
+def test_on_step_reports_each_round_of_a_revision_loop(conn, idea):
+    fake_ai = make_fake_ai_module(
+        critique_sequence=[[{"criterion": "Hook", "issue": "fraco"}], []],
+        revised_captions=["v1"],
+    )
+    events = []
+    pipeline.run_generation_pipeline(
+        client=None, conn=conn, idea=idea, tone="Educativo-Científico",
+        brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+        on_step=lambda step, status, detail=None: events.append((step, status)),
+    )
+    assert events == [
+        ("generate_draft", "running"), ("generate_draft", "done"),
+        ("critique_draft", "running"), ("critique_draft", "done"),
+        ("revise_draft", "running"), ("revise_draft", "done"),
+        ("critique_draft", "running"), ("critique_draft", "done"),
+    ]
+
+
+def test_on_step_reports_error_with_detail_when_a_call_fails(conn, idea):
+    def failing_critique(client, draft, brand_pack):
+        raise ai.InvalidAIResponseError("resposta inválida")
+
+    fake_ai = make_fake_ai_module(critique_sequence=[[]])
+    fake_ai.critique_draft = failing_critique
+    events = []
+
+    with pytest.raises(ai.InvalidAIResponseError):
+        pipeline.run_generation_pipeline(
+            client=None, conn=conn, idea=idea, tone="Educativo-Científico",
+            brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+            on_step=lambda step, status, detail=None: events.append((step, status, detail)),
+        )
+
+    assert events[:2] == [("generate_draft", "running", None), ("generate_draft", "done", None)]
+    assert events[2][:2] == ("critique_draft", "running")
+    assert events[3] == ("critique_draft", "error", "resposta inválida")
+
+
+def test_on_step_reports_error_when_daily_cap_already_reached(conn, idea):
+    db.log_api_call(conn, "generate_draft", tokens_in=1, tokens_out=1, estimated_cost_usd=2.0, idea_id=idea["id"])
+    fake_ai = make_fake_ai_module(critique_sequence=[[]])
+    events = []
+    with pytest.raises(pipeline.DailyBudgetExceededError):
+        pipeline.run_generation_pipeline(
+            client=None, conn=conn, idea=idea, tone="Educativo-Científico",
+            brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+            on_step=lambda step, status, detail=None: events.append((step, status)),
+        )
+    assert events[0] == ("generate_draft", "running")
+    assert events[1][0] == "generate_draft"
+    assert events[1][1] == "error"
+
+
+def test_run_extraction_reports_progress(conn):
+    fake_ai = make_fake_ai_module(critique_sequence=[[]])
+    events = []
+    pipeline.run_extraction(
+        client=None, conn=conn, reference_text="texto qualquer",
+        brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+        on_step=lambda step, status, detail=None: events.append((step, status)),
+    )
+    assert events == [("extract_topics", "running"), ("extract_topics", "done")]
+
+
+def test_on_step_defaults_to_none_and_does_not_break_existing_callers(conn, idea):
+    """Existing tests (and any caller) that don't pass on_step must keep working."""
+    fake_ai = make_fake_ai_module(critique_sequence=[[]])
+    draft, flags, rounds = pipeline.run_generation_pipeline(
+        client=None, conn=conn, idea=idea, tone="Educativo-Científico",
+        brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+    )
+    assert draft["caption"] == "v0"

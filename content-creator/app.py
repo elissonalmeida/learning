@@ -14,6 +14,48 @@ client = ai.get_client(cfg.api_key)
 
 TONES = ai.load_tone_names(cfg.brand_pack)
 
+STEP_LABELS = {
+    "extract_topics": "A analisar o texto de referência",
+    "generate_draft": "A gerar o rascunho",
+    "critique_draft": "A rever a qualidade",
+    "revise_draft": "A corrigir problemas encontrados",
+}
+
+
+def run_with_progress(fn, *args, **kwargs):
+    """Runs fn (a pipeline.* call) showing a live step checklist via st.status.
+    On failure, marks the failed step and opens an error box with the raw
+    exception for troubleshooting, then re-raises so existing callers'
+    except-blocks still handle the friendly error message as before."""
+    lines = {}
+
+    with st.status("A processar...", expanded=True) as status:
+        placeholder = st.empty()
+
+        def render():
+            placeholder.markdown("\n\n".join(lines.values()))
+
+        def on_step(step, step_status, detail=None):
+            label = STEP_LABELS.get(step, step)
+            if step_status == "running":
+                lines[step] = f"⏳ {label}..."
+            elif step_status == "done":
+                lines[step] = f"✅ {label}"
+            elif step_status == "error":
+                lines[step] = f"❌ {label} — falhou"
+            render()
+
+        try:
+            result = fn(*args, on_step=on_step, **kwargs)
+        except Exception as e:
+            status.update(label="Falhou", state="error")
+            with st.expander("Detalhes do erro (para diagnóstico)", expanded=True):
+                st.code(f"{type(e).__name__}: {e}")
+            raise
+        else:
+            status.update(label="Concluído", state="complete")
+            return result
+
 st.title(f"Content Creator — {cfg.brand_pack}")
 
 tab_new, tab_library = st.tabs(["Nova Ideia", "Biblioteca"])
@@ -36,7 +78,8 @@ with tab_new:
                 st.error(str(e))
             else:
                 try:
-                    topics = pipeline.run_extraction(
+                    topics = run_with_progress(
+                        pipeline.run_extraction,
                         client, conn, reference_text, cfg.brand_pack, cfg.max_daily_spend_usd,
                     )
                 except pipeline.DailyBudgetExceededError as e:
@@ -73,7 +116,8 @@ with tab_new:
         tone = st.selectbox("Tom", TONES, index=tone_index)
         if st.button("Gerar rascunho"):
             try:
-                draft, flags, rounds = pipeline.run_generation_pipeline(
+                draft, flags, rounds = run_with_progress(
+                    pipeline.run_generation_pipeline,
                     client, conn, chosen_idea, tone, cfg.brand_pack, cfg.max_daily_spend_usd,
                 )
             except pipeline.DailyBudgetExceededError as e:
