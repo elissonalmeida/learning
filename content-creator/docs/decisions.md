@@ -14,6 +14,14 @@ Format for each entry:
 
 ---
 
+## 2026-09-13 — Extended thinking broke content[0].text on the very first real API call
+
+**What:** The very first real, paid call to `generate_draft` (from the live browser test, not a unit test) crashed with `AttributeError: 'ThinkingBlock' object has no attribute 'text'`. `_call_claude` assumed `response.content[0]` was always the text block; Claude Sonnet 5 puts an extended-thinking block first when thinking isn't explicitly disabled, so `content[0]` had no `.text` at all. Fixed by scanning `response.content` for the first block with `type == "text"`. Every unit test's mocked response used `MagicMock(text=...)` with no `.type` set, so all 45 tests passed while this bug shipped — a `MagicMock`'s auto-generated `.type` attribute is truthy and non-string, so a naive `block.type == "text"` check against it would have silently been `False` too, meaning the mock itself needed a real `.type` before the tests could even prove the fix worked.
+**Why:** the final whole-branch review (which raised `max_tokens`/truncation as a risk) reasoned about thinking tokens consuming the *budget*, but didn't anticipate thinking arriving as a *separate content block ahead of the text* — a different failure mode from truncation, invisible to any test built on a hand-shaped mock rather than the real SDK's response shape.
+**Cost if wrong / what to watch for:** this is exactly why Task 9's Step 5 (a real run against the real API, not just mocks) was deliberately reserved as a human-in-the-loop step rather than something a subagent could tick off — no amount of correct mocking would have caught a wrong assumption about the mock's own shape. Any future change to response parsing should be sanity-checked against one real call, not just the test suite.
+
+---
+
 ## 2026-09-13 — Every real bug found post-implementation lived at a seam between two tasks
 
 **What:** After all 10 plan tasks passed their individual reviews clean, a final whole-branch review found 1 Critical and 6 Important bugs — none of them inside a single task's own code, all of them where two tasks' work met. Concretely: `hard_delete_idea` (Task 3) crashed the moment `drafts`/`api_calls` (Task 4) existed and had rows, because the FK cascade got dropped when it was correctly *not* needed yet at Task 3's own review time. The Streamlit approve/reject buttons (Task 9) were structurally broken from day one but every task-level review only checked "does this call the right function," never "does this button actually fire." The daily spend cap (Task 8) covered three of four AI call sites because the fourth was wired directly in Task 9's app.py instead of through Task 8's guarded path. Fixed in one bundled fix wave (commits 109f7ae, f6c16f4, 00878d3) plus a new `test_end_to_end.py` that exercises the full idea→pipeline→approve→delete path — exactly the test shape that would have caught these before they shipped.
