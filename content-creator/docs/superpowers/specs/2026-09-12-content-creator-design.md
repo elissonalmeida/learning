@@ -704,6 +704,7 @@ Todo o conteúdo produzido por este squad é avaliado contra os seguintes crité
 - [ ] Reiki é descrito como autoconhecimento/regulação energética, NUNCA como magia ou cura garantida
 - [ ] "Detox" só aparece com especificação do quê e como (não usado como conceito vago)
 - [ ] Nomes científicos de plantas estão correctos quando incluídos
+- [ ] Mecanismo de acção nomeado com especificidade real, não apenas com linguagem que soa científica: "actua sobre receptores GABA" ou "regula o eixo hipotálamo-hipófise-adrenal" PASSA; "tem propriedades regulatórias" ou "interage com o sistema endócrino" sem dizer como FALHA — são vagas mesmo soando técnicas. Se o mecanismo exacto não é cientificamente estabelecido, dizer isso explicitamente ("o mecanismo exacto ainda não é totalmente compreendido, mas...") em vez de usar linguagem vaga para simular precisão.
 
 **Validação:** Taís Terapias valida este critério antes da entrega.
 
@@ -835,6 +836,14 @@ Este documento lista os erros que NUNCA devem aparecer no conteúdo produzido pa
 **Exemplo errado:** "O Reiki eleva a tua vibração e traz energia positiva."
 **Alternativa correcta:** "O Reiki actua sobre o sistema nervoso autónomo — muitas pessoas descrevem uma sensação de relaxamento profundo que se assemelha ao estado pré-sono. Não é magia — é a regulação do eixo parassimpático."
 **Porquê:** A audiência 45-54 toma decisões de saúde. Linguagem vaga sem mecanismo não credibiliza — afasta quem tem formação e não convence quem não tem.
+
+---
+
+### 1b. Mecanismo com som científico mas sem especificidade real
+**Problema:** Frases que soam rigorosas mas não nomeiam nenhum receptor, via ou processo fisiológico concreto — uma forma mais subtil do anti-padrão 1, confirmada num teste real com a API (óleo de gerânio na perimenopausa) onde o rascunho passou a crítica apesar de usar exactamente este padrão.
+**Exemplo errado:** "Tem propriedades regulatórias." / "Interage com o sistema endócrino." / "Actua sobre o corpo de forma equilibradora."
+**Alternativa correcta:** "Actua sobre receptores GABA." / "Regula o eixo hipotálamo-hipófise-adrenal." Se o mecanismo exacto não estiver estabelecido: "O mecanismo exacto ainda não é totalmente compreendido, mas estudos preliminares associam a inalação a..." — a incerteza explícita é mais credível do que a vagueza que finge precisão.
+**Porquê:** Ver Critério 6 em `quality-criteria.md`.
 
 ---
 

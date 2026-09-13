@@ -112,6 +112,7 @@ Todo o conteúdo produzido por este squad é avaliado contra os seguintes crité
 - [ ] Reiki é descrito como autoconhecimento/regulação energética, NUNCA como magia ou cura garantida
 - [ ] "Detox" só aparece com especificação do quê e como (não usado como conceito vago)
 - [ ] Nomes científicos de plantas estão correctos quando incluídos
+- [ ] Mecanismo de acção nomeado com especificidade real, não apenas com linguagem que soa científica: "actua sobre receptores GABA" ou "regula o eixo hipotálamo-hipófise-adrenal" PASSA; "tem propriedades regulatórias" ou "interage com o sistema endócrino" sem dizer como FALHA — são vagas mesmo soando técnicas. Se o mecanismo exacto não é cientificamente estabelecido, dizer isso explicitamente ("o mecanismo exacto ainda não é totalmente compreendido, mas...") em vez de usar linguagem vaga para simular precisão.
 
 **Validação:** Taís Terapias valida este critério antes da entrega.
 

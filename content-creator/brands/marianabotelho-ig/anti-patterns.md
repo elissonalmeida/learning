@@ -16,6 +16,14 @@ Este documento lista os erros que NUNCA devem aparecer no conteúdo produzido pa
 
 ---
 
+### 1b. Mecanismo com som científico mas sem especificidade real
+**Problema:** Frases que soam rigorosas mas não nomeiam nenhum receptor, via ou processo fisiológico concreto — uma forma mais subtil do anti-padrão 1, confirmada num teste real com a API (óleo de gerânio na perimenopausa) onde o rascunho passou a crítica apesar de usar exactamente este padrão.
+**Exemplo errado:** "Tem propriedades regulatórias." / "Interage com o sistema endócrino." / "Actua sobre o corpo de forma equilibradora."
+**Alternativa correcta:** "Actua sobre receptores GABA." / "Regula o eixo hipotálamo-hipófise-adrenal." Se o mecanismo exacto não estiver estabelecido: "O mecanismo exacto ainda não é totalmente compreendido, mas estudos preliminares associam a inalação a..." — a incerteza explícita é mais credível do que a vagueza que finge precisão.
+**Porquê:** Ver Critério 6 em `quality-criteria.md`.
+
+---
+
 ### 2. "Reike" em vez de "reiki"
 **Problema:** Erro ortográfico grave que apareceu 6 vezes no perfil real da Mariana (Post 3). Destrói credibilidade de uma farmacêutica especializada em terapias holísticas.
 **Exemplo errado:** `#reike` / "sessão de reike" / "praticante de reike"
