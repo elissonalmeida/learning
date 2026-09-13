@@ -51,6 +51,34 @@ def test_hard_delete_removes_row(conn):
     db.hard_delete_idea(conn, idea_id)
     assert db.get_idea(conn, idea_id) is None
 
+def test_hard_delete_removes_drafts_and_keeps_api_calls(conn):
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "topic G")
+    db.create_draft(conn, idea_id, 0, "legenda", ["s1"], [])
+    db.log_api_call(
+        conn, "generate_draft", tokens_in=100, tokens_out=50,
+        estimated_cost_usd=0.01, idea_id=idea_id,
+    )
+    db.archive_idea(conn, idea_id)
+    db.hard_delete_idea(conn, idea_id)
+
+    assert db.get_idea(conn, idea_id) is None
+    assert db.list_drafts_for_idea(conn, idea_id) == []
+    calls = conn.execute("SELECT * FROM api_calls").fetchall()
+    assert len(calls) == 1
+    assert calls[0]["idea_id"] is None
+    assert calls[0]["estimated_cost_usd"] == 0.01
+
+
+def test_update_draft_quality_flags(conn):
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "topic H")
+    draft_id = db.create_draft(conn, idea_id, 0, "legenda", ["s1"], None)
+    assert db.list_drafts_for_idea(conn, idea_id)[0]["quality_flags"] == []
+
+    flags = [{"criterion": "Hook", "issue": "fraco"}]
+    db.update_draft_quality_flags(conn, draft_id, flags)
+    assert db.list_drafts_for_idea(conn, idea_id)[0]["quality_flags"] == flags
+
+
 def test_update_idea_status(conn):
     idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "topic F")
     db.update_idea_status(conn, idea_id, "approved")

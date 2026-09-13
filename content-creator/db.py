@@ -94,6 +94,10 @@ def hard_delete_idea(conn, idea_id):
     idea = get_idea(conn, idea_id)
     if idea is None or idea["archived_at"] is None:
         raise ValueError("Can only hard-delete an idea that has already been archived")
+    # Drafts belong to the idea and go with it; api_calls are a spend audit trail
+    # that must survive the idea being cleaned up, so we only null the link.
+    conn.execute("DELETE FROM drafts WHERE idea_id = ?", (idea_id,))
+    conn.execute("UPDATE api_calls SET idea_id = NULL WHERE idea_id = ?", (idea_id,))
     conn.execute("DELETE FROM ideas WHERE id = ?", (idea_id,))
     conn.commit()
 
@@ -111,6 +115,14 @@ def create_draft(conn, idea_id, round_, caption, slides, quality_flags=None):
     )
     conn.commit()
     return cursor.lastrowid
+
+
+def update_draft_quality_flags(conn, draft_id, flags):
+    conn.execute(
+        "UPDATE drafts SET quality_flags = ? WHERE id = ?",
+        (json.dumps(flags or []), draft_id),
+    )
+    conn.commit()
 
 
 def list_drafts_for_idea(conn, idea_id):
