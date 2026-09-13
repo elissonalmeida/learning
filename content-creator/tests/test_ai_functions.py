@@ -4,11 +4,12 @@ import pytest
 import ai
 
 
-def make_fake_client(response_text, tokens_in=100, tokens_out=50):
+def make_fake_client(response_text, tokens_in=100, tokens_out=50, stop_reason="end_turn"):
     fake_response = MagicMock()
     fake_response.content = [MagicMock(text=response_text)]
     fake_response.usage.input_tokens = tokens_in
     fake_response.usage.output_tokens = tokens_out
+    fake_response.stop_reason = stop_reason
     client = MagicMock()
     client.messages.create.return_value = fake_response
     return client
@@ -61,6 +62,41 @@ def test_critique_draft_parses_json_array():
     draft = {"caption": "legenda", "slides": ["s1"]}
     flags, tokens_in, tokens_out, cost = ai.critique_draft(client, draft, "marianabotelho-ig")
     assert flags == [{"criterion": "Hashtags", "issue": "só 3 hashtags"}]
+
+
+def test_truncated_response_raises_response_truncated_error():
+    client = make_fake_client('{"caption": "legenda cort', stop_reason="max_tokens")
+    with pytest.raises(ai.ResponseTruncatedError):
+        ai.generate_draft(
+            client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig"
+        )
+
+
+def test_non_json_response_raises_invalid_ai_response_error():
+    client = make_fake_client("Claro! Aqui está o teu carrossel: ...")
+    with pytest.raises(ai.InvalidAIResponseError) as excinfo:
+        ai.generate_draft(
+            client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig"
+        )
+    assert "Claro! Aqui está o teu carrossel" in str(excinfo.value)
+
+
+def test_load_tone_names_reads_the_brand_pack():
+    names = ai.load_tone_names("marianabotelho-ig")
+    assert len(names) == 6
+    assert "Educativo-Científico" in names
+    assert "Íntimo-Poético" in names
+    assert names[0] == "Íntimo-Poético"
+
+
+def test_suggest_default_tone_matches_pillar():
+    assert ai.suggest_default_tone("marianabotelho-ig", "Educativo Integrativo") == "Educativo-Científico"
+    assert ai.suggest_default_tone("marianabotelho-ig", "Bastidores") == "Íntimo-Poético"
+
+
+def test_suggest_default_tone_returns_none_when_unknown_or_missing():
+    assert ai.suggest_default_tone("marianabotelho-ig", "Pilar Inexistente") is None
+    assert ai.suggest_default_tone("marianabotelho-ig", None) is None
 
 
 def test_revise_draft_parses_json():

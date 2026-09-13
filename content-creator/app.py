@@ -12,14 +12,7 @@ conn = db.get_connection(cfg.db_path)
 db.init_db(conn)
 client = ai.get_client(cfg.api_key)
 
-TONES = [
-    "Íntimo-Poético",
-    "Educativo-Científico",
-    "Provocador-Suave",
-    "Narrativo-Pessoal",
-    "Ritual-Contemplativo",
-    "Urgência-Gentil",
-]
+TONES = ai.load_tone_names(cfg.brand_pack)
 
 st.title(f"Content Creator — {cfg.brand_pack}")
 
@@ -42,12 +35,15 @@ with tab_new:
             except ai.ReferenceTooLongError as e:
                 st.error(str(e))
             else:
-                topics, tokens_in, tokens_out, cost = ai.extract_topics(
-                    client, reference_text, cfg.brand_pack
-                )
-                db.log_api_call(conn, "extract_topics", tokens_in, tokens_out, cost)
-                st.session_state["candidate_topics"] = topics
-                st.session_state["reference_text"] = reference_text
+                try:
+                    topics = pipeline.run_extraction(
+                        client, conn, reference_text, cfg.brand_pack, cfg.max_daily_spend_usd,
+                    )
+                except pipeline.DailyBudgetExceededError as e:
+                    st.error(str(e))
+                else:
+                    st.session_state["candidate_topics"] = topics
+                    st.session_state["reference_text"] = reference_text
 
         candidates = st.session_state.get("candidate_topics", [])
         if candidates:
@@ -71,31 +67,49 @@ with tab_new:
     if pending:
         options = {f"#{i['id']} — {i['topic']}": i for i in pending}
         chosen_label = st.selectbox("Ideia a rascunhar", list(options.keys()))
-        tone = st.selectbox("Tom", TONES)
+        chosen_idea = options[chosen_label]
+        suggested_tone = ai.suggest_default_tone(cfg.brand_pack, chosen_idea["pillar"])
+        tone_index = TONES.index(suggested_tone) if suggested_tone in TONES else 0
+        tone = st.selectbox("Tom", TONES, index=tone_index)
         if st.button("Gerar rascunho"):
-            idea = options[chosen_label]
             try:
                 draft, flags, rounds = pipeline.run_generation_pipeline(
-                    client, conn, idea, tone, cfg.brand_pack, cfg.max_daily_spend_usd,
+                    client, conn, chosen_idea, tone, cfg.brand_pack, cfg.max_daily_spend_usd,
                 )
             except pipeline.DailyBudgetExceededError as e:
                 st.error(str(e))
             else:
-                st.subheader("Legenda")
-                st.write(draft["caption"])
-                st.subheader("Slides")
-                for i, slide in enumerate(draft["slides"], start=1):
-                    st.write(f"**Slide {i}:** {slide}")
-                if flags:
-                    remaining = ", ".join(f["criterion"] for f in flags)
-                    st.warning(f"Pontos ainda não resolvidos após {rounds} ronda(s): {remaining}")
-                col1, col2 = st.columns(2)
-                if col1.button("Aprovar"):
-                    db.update_idea_status(conn, idea["id"], "approved")
-                if col2.button("Rejeitar"):
-                    db.update_idea_status(conn, idea["id"], "rejected")
+                st.session_state["current_result"] = {
+                    "draft": draft,
+                    "flags": flags,
+                    "rounds": rounds,
+                    "idea": chosen_idea,
+                }
     else:
         st.info("Sem ideias pendentes. Cria uma acima.")
+
+    # Rendered outside the "Gerar rascunho" button block so the Aprovar/Rejeitar
+    # buttons survive the rerun a nested button click would otherwise discard.
+    if "current_result" in st.session_state:
+        result = st.session_state["current_result"]
+        draft, flags, rounds, idea = (
+            result["draft"], result["flags"], result["rounds"], result["idea"],
+        )
+        st.subheader("Legenda")
+        st.write(draft["caption"])
+        st.subheader("Slides")
+        for i, slide in enumerate(draft["slides"], start=1):
+            st.write(f"**Slide {i}:** {slide}")
+        if flags:
+            remaining = ", ".join(f["criterion"] for f in flags)
+            st.warning(f"Pontos ainda não resolvidos após {rounds} ronda(s): {remaining}")
+        col1, col2 = st.columns(2)
+        if col1.button("Aprovar"):
+            db.update_idea_status(conn, idea["id"], "approved")
+            del st.session_state["current_result"]
+        if col2.button("Rejeitar"):
+            db.update_idea_status(conn, idea["id"], "rejected")
+            del st.session_state["current_result"]
 
 with tab_library:
     st.subheader("Biblioteca")

@@ -19,6 +19,13 @@ def _invoke(conn, idea_id, daily_cap_usd, function_name, ai_call):
     return result
 
 
+def run_extraction(client, conn, reference_text, brand_pack, daily_cap_usd, ai_module=ai):
+    return _invoke(
+        conn, None, daily_cap_usd, "extract_topics",
+        lambda: ai_module.extract_topics(client, reference_text, brand_pack),
+    )
+
+
 def run_generation_pipeline(client, conn, idea, tone, brand_pack, daily_cap_usd, ai_module=ai):
     idea_id = idea["id"]
 
@@ -27,23 +34,26 @@ def run_generation_pipeline(client, conn, idea, tone, brand_pack, daily_cap_usd,
         lambda: ai_module.generate_draft(client, idea["topic"], tone, idea["pillar"], brand_pack),
     )
     round_ = 0
+    # Persist the paid-for draft before critiquing, so it survives a failed critique.
+    draft_id = db.create_draft(conn, idea_id, round_, draft["caption"], draft["slides"], None)
     flags = _invoke(
         conn, idea_id, daily_cap_usd, "critique_draft",
         lambda: ai_module.critique_draft(client, draft, brand_pack),
     )
-    db.create_draft(conn, idea_id, round_, draft["caption"], draft["slides"], flags)
+    db.update_draft_quality_flags(conn, draft_id, flags)
 
-    while flags and round_ < ai.MAX_REVISION_ROUNDS:
+    while flags and round_ < ai_module.MAX_REVISION_ROUNDS:
         round_ += 1
         draft = _invoke(
             conn, idea_id, daily_cap_usd, "revise_draft",
             lambda: ai_module.revise_draft(client, draft, flags, brand_pack),
         )
+        draft_id = db.create_draft(conn, idea_id, round_, draft["caption"], draft["slides"], None)
         flags = _invoke(
             conn, idea_id, daily_cap_usd, "critique_draft",
             lambda: ai_module.critique_draft(client, draft, brand_pack),
         )
-        db.create_draft(conn, idea_id, round_, draft["caption"], draft["slides"], flags)
+        db.update_draft_quality_flags(conn, draft_id, flags)
 
     db.update_idea_status(conn, idea_id, "reviewed")
     return draft, flags, round_
