@@ -14,6 +14,46 @@ Format for each entry:
 
 ---
 
+## 2026-09-13 — Passing content-creator's own quality gate isn't the same as being good
+
+**What:** After the app worked end to end, the real approved draft still had a genuine quality gap: it described geranium oil with "tem propriedades regulatórias" / "interage com o sistema endócrino" — language that sounds scientific but names no actual mechanism, and Critério 6 as originally written only forbade exaggerated/magical claims, not vagueness dressed up as rigor. Tightened Critério 6 and added anti-padrão 1b to require a named receptor/pathway/process (or an explicit "the mechanism isn't established yet"). Re-ran `critique_draft` against the exact same draft that had passed clean — it now correctly flags the vague language by name.
+**Why:** all of the code-level bugs found earlier that day (thinking blocks, truncation, JSON fences) were things a human couldn't judge without reading actual model output, but they were still binary right/wrong. This one is different: the code worked, the JSON parsed, the pipeline completed — and the content was still not as good as it should be. No test suite catches this; only reading the real output against the brand's own bar does.
+**Cost if wrong / what to watch for:** quality-criteria.md is not a fixed spec — expect to keep tightening it every time real output reveals a gap between "technically passes" and "actually good." Budget for this as ongoing work, not a one-time setup cost.
+
+---
+
+## 2026-09-13 — Three real bugs found in one live test session, none caught by 45+ mocked tests
+
+**What:** The first real, paid run of the app hit three distinct crashes in sequence, one per attempt: (1) `content[0].text` assumed the text block was always first, but Sonnet 5's default extended thinking put a `ThinkingBlock` there instead; (2) even after fixing that, `critique_draft` got truncated at `MAX_TOKENS=8000` because thinking tokens silently consumed most of the budget before any real output; (3) even after raising `MAX_TOKENS` and setting `output_config={"effort": "low"}` to curb thinking spend, the real response came back wrapped in a ` ```json ` markdown fence despite the prompt explicitly forbidding it, breaking `json.loads`. Each was fixed and retested in turn (commits da111c9, 6a5f30f, 8161b53).
+**Why:** every mocked test built its fake Anthropic response by hand, so every mock only ever looked like what the code already expected — a mock can't reveal a wrong assumption about its own shape. Real API behavior (adaptive thinking layout, actual token consumption, a model's willingness to ignore a formatting instruction) only shows up by actually calling the API.
+**Cost if wrong / what to watch for:** this is the concrete argument for never skipping a real, paid, human-observed test run before treating an AI-calling feature as done — no amount of unit test coverage substitutes for it. If a future change touches `_call_claude` or response parsing, re-run one real generation before trusting the test suite alone.
+
+---
+
+## 2026-09-13 — Extended thinking broke content[0].text on the very first real API call
+
+**What:** The very first real, paid call to `generate_draft` (from the live browser test, not a unit test) crashed with `AttributeError: 'ThinkingBlock' object has no attribute 'text'`. `_call_claude` assumed `response.content[0]` was always the text block; Claude Sonnet 5 puts an extended-thinking block first when thinking isn't explicitly disabled, so `content[0]` had no `.text` at all. Fixed by scanning `response.content` for the first block with `type == "text"`. Every unit test's mocked response used `MagicMock(text=...)` with no `.type` set, so all 45 tests passed while this bug shipped — a `MagicMock`'s auto-generated `.type` attribute is truthy and non-string, so a naive `block.type == "text"` check against it would have silently been `False` too, meaning the mock itself needed a real `.type` before the tests could even prove the fix worked.
+**Why:** the final whole-branch review (which raised `max_tokens`/truncation as a risk) reasoned about thinking tokens consuming the *budget*, but didn't anticipate thinking arriving as a *separate content block ahead of the text* — a different failure mode from truncation, invisible to any test built on a hand-shaped mock rather than the real SDK's response shape.
+**Cost if wrong / what to watch for:** this is exactly why Task 9's Step 5 (a real run against the real API, not just mocks) was deliberately reserved as a human-in-the-loop step rather than something a subagent could tick off — no amount of correct mocking would have caught a wrong assumption about the mock's own shape. Any future change to response parsing should be sanity-checked against one real call, not just the test suite.
+
+---
+
+## 2026-09-13 — Every real bug found post-implementation lived at a seam between two tasks
+
+**What:** After all 10 plan tasks passed their individual reviews clean, a final whole-branch review found 1 Critical and 6 Important bugs — none of them inside a single task's own code, all of them where two tasks' work met. Concretely: `hard_delete_idea` (Task 3) crashed the moment `drafts`/`api_calls` (Task 4) existed and had rows, because the FK cascade got dropped when it was correctly *not* needed yet at Task 3's own review time. The Streamlit approve/reject buttons (Task 9) were structurally broken from day one but every task-level review only checked "does this call the right function," never "does this button actually fire." The daily spend cap (Task 8) covered three of four AI call sites because the fourth was wired directly in Task 9's app.py instead of through Task 8's guarded path. Fixed in one bundled fix wave (commits 109f7ae, f6c16f4, 00878d3) plus a new `test_end_to_end.py` that exercises the full idea→pipeline→approve→delete path — exactly the test shape that would have caught these before they shipped.
+**Why:** subagent-driven-development's per-task review is a task-scoped gate by design — a fresh reviewer given only Task N's diff has no way to know Task N+3 will build a foreign key onto a table Task N's code assumed was empty. Each individual review was correct given what it could see; the failure mode was structural (no test ever crossed the seam), not a reviewer miss.
+**Cost if wrong / what to watch for:** any future multi-task plan needs at least one integration/seam test written *after* the pieces exist, not just per-task unit tests — the final whole-branch review step is not optional ceremony, it is where seam bugs are actually caught. If a future plan skips the final review to save time, budget for these bugs surfacing in production instead.
+
+---
+
+## 2026-09-12 — Narrowed the em-dash anti-pattern after it conflicted with the brand's own voice
+
+**What:** Live-tested `generate_draft` on a new topic ("óleo essencial de gerânio para equilíbrio hormonal") before writing any app code, per Task 6. The output used an em-dash for a short clarifying aside ("...pelo nervo olfactivo — a mesma via da lavanda"), which the just-added anti-pattern 13 would have flagged as an AI tell — except the brand's own official `output-examples.md` uses em-dashes exactly that way ("Não é magia — é a regulação do eixo parassimpático."). Narrowed the rule in `anti-patterns.md`, `quality-criteria.md` Critério 11, and the spec appendix: only ban em-dash used as a substitute for a logical connector ("porque"/"mas"/"então") joining two clauses; explicitly allow short apposition/clarification, with the brand's own examples cited as the permitted case.
+**Why:** a rule copied from a general-purpose AI-writing guide doesn't automatically fit a specific brand's authentic style — this brand's voice already leans on em-dashes as a stylistic device. Without live-testing the actual prompt against real brand content before locking it into the pipeline, this false positive would have shipped silently and fought the brand voice on every single critique pass.
+**Cost if wrong / what to watch for:** if the narrowed rule turns out too permissive (lets real AI-tell em-dash chains through), the tell to watch for is 2+ em-dashes in one sentence/caption doing connector work — a frequency cap is the fallback option that was considered and set aside in favor of this semantic distinction.
+
+---
+
 ## 2026-09-12 — AI-slop patterns folded into the brand pack itself, not just a session skill
 
 **What:** Installed the `unslop` skill for this Claude Code session, but also added anti-pattern 13 and quality-criteria Critério 11 directly into the `marianabotelho-ig` brand pack (in the spec's Appendix, since Task 1 hasn't run yet) — em-dash-as-connector, "não só X mas também Y", forced rule of three, empty AI vocabulary, promotional adjectives, filler, generic conclusions.
