@@ -4,9 +4,15 @@ import pytest
 import ai
 
 
-def make_fake_client(response_text, tokens_in=100, tokens_out=50, stop_reason="end_turn"):
+def make_fake_client(response_text, tokens_in=100, tokens_out=50, stop_reason="end_turn", with_thinking_block=False):
     fake_response = MagicMock()
-    fake_response.content = [MagicMock(text=response_text)]
+    text_block = MagicMock(type="text", text=response_text)
+    if with_thinking_block:
+        thinking_block = MagicMock(type="thinking")
+        del thinking_block.text  # a real ThinkingBlock has no .text attribute
+        fake_response.content = [thinking_block, text_block]
+    else:
+        fake_response.content = [text_block]
     fake_response.usage.input_tokens = tokens_in
     fake_response.usage.output_tokens = tokens_out
     fake_response.stop_reason = stop_reason
@@ -79,6 +85,27 @@ def test_non_json_response_raises_invalid_ai_response_error():
             client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig"
         )
     assert "Claro! Aqui está o teu carrossel" in str(excinfo.value)
+
+
+def test_call_claude_skips_a_leading_thinking_block():
+    """Claude Sonnet 5 can return an extended-thinking block as content[0] with no
+    .text attribute; _call_claude must find the actual text block, not assume index 0."""
+    fake_json = json.dumps({"caption": "legenda", "slides": ["s1", "s2"]})
+    client = make_fake_client(fake_json, with_thinking_block=True)
+    draft, tokens_in, tokens_out, cost = ai.generate_draft(
+        client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig"
+    )
+    assert draft == {"caption": "legenda", "slides": ["s1", "s2"]}
+
+
+def test_call_claude_raises_invalid_ai_response_error_when_no_text_block_present():
+    client = make_fake_client("irrelevant")
+    client.messages.create.return_value.content = [MagicMock(type="thinking")]
+    del client.messages.create.return_value.content[0].text
+    with pytest.raises(ai.InvalidAIResponseError):
+        ai.generate_draft(
+            client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig"
+        )
 
 
 def test_load_tone_names_reads_the_brand_pack():

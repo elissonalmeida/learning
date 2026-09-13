@@ -116,7 +116,14 @@ def _call_claude(client, prompt_text, max_tokens=MAX_TOKENS):
             f"A resposta foi cortada ao atingir o limite de {max_tokens} tokens de saída. "
             "Reduz o tamanho do pedido ou aumenta MAX_TOKENS em ai.py."
         )
-    text = response.content[0].text
+    text_block = next((block for block in response.content if getattr(block, "type", None) == "text"), None)
+    if text_block is None:
+        raise InvalidAIResponseError(
+            "A resposta da Claude não contém nenhum bloco de texto (pode conter apenas "
+            "raciocínio interno). Blocos recebidos: "
+            + ", ".join(getattr(b, "type", "desconhecido") for b in response.content)
+        )
+    text = text_block.text
     return text, response.usage.input_tokens, response.usage.output_tokens
 
 
