@@ -14,6 +14,14 @@ Format for each entry:
 
 ---
 
+## 2026-09-13 — Passing content-creator's own quality gate isn't the same as being good
+
+**What:** After the app worked end to end, the real approved draft still had a genuine quality gap: it described geranium oil with "tem propriedades regulatórias" / "interage com o sistema endócrino" — language that sounds scientific but names no actual mechanism, and Critério 6 as originally written only forbade exaggerated/magical claims, not vagueness dressed up as rigor. Tightened Critério 6 and added anti-padrão 1b to require a named receptor/pathway/process (or an explicit "the mechanism isn't established yet"). Re-ran `critique_draft` against the exact same draft that had passed clean — it now correctly flags the vague language by name.
+**Why:** all of the code-level bugs found earlier that day (thinking blocks, truncation, JSON fences) were things a human couldn't judge without reading actual model output, but they were still binary right/wrong. This one is different: the code worked, the JSON parsed, the pipeline completed — and the content was still not as good as it should be. No test suite catches this; only reading the real output against the brand's own bar does.
+**Cost if wrong / what to watch for:** quality-criteria.md is not a fixed spec — expect to keep tightening it every time real output reveals a gap between "technically passes" and "actually good." Budget for this as ongoing work, not a one-time setup cost.
+
+---
+
 ## 2026-09-13 — Three real bugs found in one live test session, none caught by 45+ mocked tests
 
 **What:** The first real, paid run of the app hit three distinct crashes in sequence, one per attempt: (1) `content[0].text` assumed the text block was always first, but Sonnet 5's default extended thinking put a `ThinkingBlock` there instead; (2) even after fixing that, `critique_draft` got truncated at `MAX_TOKENS=8000` because thinking tokens silently consumed most of the budget before any real output; (3) even after raising `MAX_TOKENS` and setting `output_config={"effort": "low"}` to curb thinking spend, the real response came back wrapped in a ` ```json ` markdown fence despite the prompt explicitly forbidding it, breaking `json.loads`. Each was fixed and retested in turn (commits da111c9, 6a5f30f, 8161b53).
