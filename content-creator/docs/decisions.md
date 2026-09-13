@@ -14,6 +14,14 @@ Format for each entry:
 
 ---
 
+## 2026-09-13 — Three real bugs found in one live test session, none caught by 45+ mocked tests
+
+**What:** The first real, paid run of the app hit three distinct crashes in sequence, one per attempt: (1) `content[0].text` assumed the text block was always first, but Sonnet 5's default extended thinking put a `ThinkingBlock` there instead; (2) even after fixing that, `critique_draft` got truncated at `MAX_TOKENS=8000` because thinking tokens silently consumed most of the budget before any real output; (3) even after raising `MAX_TOKENS` and setting `output_config={"effort": "low"}` to curb thinking spend, the real response came back wrapped in a ` ```json ` markdown fence despite the prompt explicitly forbidding it, breaking `json.loads`. Each was fixed and retested in turn (commits da111c9, 6a5f30f, 8161b53).
+**Why:** every mocked test built its fake Anthropic response by hand, so every mock only ever looked like what the code already expected — a mock can't reveal a wrong assumption about its own shape. Real API behavior (adaptive thinking layout, actual token consumption, a model's willingness to ignore a formatting instruction) only shows up by actually calling the API.
+**Cost if wrong / what to watch for:** this is the concrete argument for never skipping a real, paid, human-observed test run before treating an AI-calling feature as done — no amount of unit test coverage substitutes for it. If a future change touches `_call_claude` or response parsing, re-run one real generation before trusting the test suite alone.
+
+---
+
 ## 2026-09-13 — Extended thinking broke content[0].text on the very first real API call
 
 **What:** The very first real, paid call to `generate_draft` (from the live browser test, not a unit test) crashed with `AttributeError: 'ThinkingBlock' object has no attribute 'text'`. `_call_claude` assumed `response.content[0]` was always the text block; Claude Sonnet 5 puts an extended-thinking block first when thinking isn't explicitly disabled, so `content[0]` had no `.text` at all. Fixed by scanning `response.content` for the first block with `type == "text"`. Every unit test's mocked response used `MagicMock(text=...)` with no `.type` set, so all 45 tests passed while this bug shipped — a `MagicMock`'s auto-generated `.type` attribute is truthy and non-string, so a naive `block.type == "text"` check against it would have silently been `False` too, meaning the mock itself needed a real `.type` before the tests could even prove the fix worked.
