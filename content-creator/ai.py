@@ -31,9 +31,20 @@ class InvalidAIResponseError(Exception):
     pass
 
 
+_JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL)
+
+
+def _strip_json_fence(text):
+    """Models sometimes wrap JSON output in a markdown code fence despite being
+    told not to. Strip a leading/trailing ```json ... ``` fence if present."""
+    match = _JSON_FENCE_RE.match(text.strip())
+    return match.group(1) if match else text
+
+
 def _parse_json_response(text):
+    unfenced = _strip_json_fence(text)
     try:
-        return json.loads(text)
+        return json.loads(unfenced)
     except json.JSONDecodeError as e:
         snippet = text[:200] if text else ""
         raise InvalidAIResponseError(

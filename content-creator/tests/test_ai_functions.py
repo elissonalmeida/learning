@@ -98,6 +98,17 @@ def test_non_json_response_raises_invalid_ai_response_error():
     assert "Claro! Aqui está o teu carrossel" in str(excinfo.value)
 
 
+def test_parse_json_response_strips_a_markdown_code_fence():
+    """The prompts say 'JSON only, no extra text' but models sometimes wrap the
+    response in a ```json ... ``` fence anyway -- confirmed live against the real
+    API on critique_draft's output. Parsing must tolerate this."""
+    fenced = '```json\n[{"criterion": "Hashtags", "issue": "só 3 hashtags"}]\n```'
+    client = make_fake_client(fenced)
+    draft = {"caption": "legenda", "slides": ["s1"]}
+    flags, tokens_in, tokens_out, cost = ai.critique_draft(client, draft, "marianabotelho-ig")
+    assert flags == [{"criterion": "Hashtags", "issue": "só 3 hashtags"}]
+
+
 def test_call_claude_skips_a_leading_thinking_block():
     """Claude Sonnet 5 can return an extended-thinking block as content[0] with no
     .text attribute; _call_claude must find the actual text block, not assume index 0."""
