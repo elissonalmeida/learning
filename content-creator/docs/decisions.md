@@ -14,6 +14,14 @@ Format for each entry:
 
 ---
 
+## 2026-09-13 — Every real bug found post-implementation lived at a seam between two tasks
+
+**What:** After all 10 plan tasks passed their individual reviews clean, a final whole-branch review found 1 Critical and 6 Important bugs — none of them inside a single task's own code, all of them where two tasks' work met. Concretely: `hard_delete_idea` (Task 3) crashed the moment `drafts`/`api_calls` (Task 4) existed and had rows, because the FK cascade got dropped when it was correctly *not* needed yet at Task 3's own review time. The Streamlit approve/reject buttons (Task 9) were structurally broken from day one but every task-level review only checked "does this call the right function," never "does this button actually fire." The daily spend cap (Task 8) covered three of four AI call sites because the fourth was wired directly in Task 9's app.py instead of through Task 8's guarded path. Fixed in one bundled fix wave (commits 109f7ae, f6c16f4, 00878d3) plus a new `test_end_to_end.py` that exercises the full idea→pipeline→approve→delete path — exactly the test shape that would have caught these before they shipped.
+**Why:** subagent-driven-development's per-task review is a task-scoped gate by design — a fresh reviewer given only Task N's diff has no way to know Task N+3 will build a foreign key onto a table Task N's code assumed was empty. Each individual review was correct given what it could see; the failure mode was structural (no test ever crossed the seam), not a reviewer miss.
+**Cost if wrong / what to watch for:** any future multi-task plan needs at least one integration/seam test written *after* the pieces exist, not just per-task unit tests — the final whole-branch review step is not optional ceremony, it is where seam bugs are actually caught. If a future plan skips the final review to save time, budget for these bugs surfacing in production instead.
+
+---
+
 ## 2026-09-12 — Narrowed the em-dash anti-pattern after it conflicted with the brand's own voice
 
 **What:** Live-tested `generate_draft` on a new topic ("óleo essencial de gerânio para equilíbrio hormonal") before writing any app code, per Task 6. The output used an em-dash for a short clarifying aside ("...pelo nervo olfactivo — a mesma via da lavanda"), which the just-added anti-pattern 13 would have flagged as an AI tell — except the brand's own official `output-examples.md` uses em-dashes exactly that way ("Não é magia — é a regulação do eixo parassimpático."). Narrowed the rule in `anti-patterns.md`, `quality-criteria.md` Critério 11, and the spec appendix: only ban em-dash used as a substitute for a logical connector ("porque"/"mas"/"então") joining two clauses; explicitly allow short apposition/clarification, with the brand's own examples cited as the permitted case.
