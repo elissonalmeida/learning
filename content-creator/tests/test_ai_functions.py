@@ -53,6 +53,17 @@ def test_extract_topics_rejects_reference_over_limit():
         ai.extract_topics(client, "palavra " * (ai.MAX_REFERENCE_WORDS + 1), "marianabotelho-ig")
 
 
+def test_call_claude_requests_low_effort_to_limit_thinking_token_spend():
+    """Sonnet 5 runs adaptive thinking by default, which competes with the real
+    output for max_tokens and caused a real truncation bug in manual testing.
+    output_config effort=low keeps thinking spend down for this mechanical,
+    template-following task."""
+    client = make_fake_client(json.dumps({"caption": "legenda", "slides": ["s1"]}))
+    ai.generate_draft(client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig")
+    _, kwargs = client.messages.create.call_args
+    assert kwargs["output_config"] == {"effort": "low"}
+
+
 def test_generate_draft_parses_json():
     fake_json = json.dumps({"caption": "legenda", "slides": ["s1", "s2"]})
     client = make_fake_client(fake_json)

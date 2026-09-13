@@ -13,7 +13,7 @@ PRICE_PER_INPUT_TOKEN = 2.00 / 1_000_000
 PRICE_PER_OUTPUT_TOKEN = 10.00 / 1_000_000
 
 MODEL = "claude-sonnet-5"
-MAX_TOKENS = 8000
+MAX_TOKENS = 16000
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 BRANDS_DIR = Path(__file__).parent / "brands"
@@ -109,6 +109,7 @@ def _call_claude(client, prompt_text, max_tokens=MAX_TOKENS):
     response = client.messages.create(
         model=MODEL,
         max_tokens=max_tokens,
+        output_config={"effort": "low"},
         messages=[{"role": "user", "content": prompt_text}],
     )
     if getattr(response, "stop_reason", None) == "max_tokens":
