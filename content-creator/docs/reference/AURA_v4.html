@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AURA v4.2.0 — @marianabotelho.pt</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5EFE2;--card:#FFFDF8;--border:#D4C4A8;--text:#2C1A0E;
+  --muted:#8B6A4A;--brown:#3E2208;--gold:#C4922A;--gold-l:#FDF6E3;
+  --rosa:#B85C5C;--rosa-l:#FAF0F0;--sage:#7A9E6F;--sage-l:#EEF4EB;
+  --cream:#EFE4D0;--purple:#534AB7;--purple-l:#EEEDFE;--blue:#185FA5;--blue-l:#E6F1FB;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
+#app{max-width:700px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.hdr{background:var(--brown);padding:12px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.hdr-title{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold);letter-spacing:1px}
+.hdr-sub{font-size:9px;color:#EFE4D0;letter-spacing:2px;text-transform:uppercase;opacity:.6;margin-top:1px}
+.hdr-badge{font-size:10px;padding:4px 10px;border-radius:20px;font-weight:600;cursor:pointer;border:none;background:var(--gold);color:var(--brown)}
+.nav{display:flex;background:var(--card);border-bottom:2px solid var(--border);flex-shrink:0;overflow-x:auto}
+.nav-btn{flex:1;min-width:65px;padding:10px 4px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;background:var(--card);color:var(--muted);border:none;border-bottom:3px solid transparent;cursor:pointer;transition:all .18s;margin-bottom:-2px;white-space:nowrap}
+.nav-btn:hover{color:var(--brown);background:var(--cream)}
+.nav-btn.active{color:var(--rosa);border-bottom-color:var(--rosa)}
+.body{flex:1;padding:14px;overflow-y:auto}
+.card{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px}
+.card-title{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--brown);margin-bottom:3px}
+.card-sub{font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:10px}
+.metric{background:var(--cream);border-radius:8px;padding:10px 6px;text-align:center}
+.metric-val{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--brown);font-weight:600;line-height:1}
+.metric-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-top:3px}
+.alert-red{background:var(--rosa-l);border-left:4px solid var(--rosa);border-radius:0 8px 8px 0;padding:9px 11px;font-size:11px;color:#7a1a1a;line-height:1.5;margin-bottom:9px}
+.alert-gold{background:var(--gold-l);border-left:4px solid var(--gold);border-radius:0 8px 8px 0;padding:9px 11px;font-size:11px;color:#5a3a08;line-height:1.5;margin-bottom:9px}
+.alert-sage{background:var(--sage-l);border-left:4px solid var(--sage);border-radius:0 8px 8px 0;padding:9px 11px;font-size:11px;color:#2a5a22;line-height:1.5;margin-bottom:9px}
+.alert-purple{background:var(--purple-l);border-left:4px solid var(--purple);border-radius:0 8px 8px 0;padding:9px 11px;font-size:11px;color:#26215C;line-height:1.5;margin-bottom:9px}
+.alert-blue{background:var(--blue-l);border-left:4px solid var(--blue);border-radius:0 8px 8px 0;padding:9px 11px;font-size:11px;color:#042C53;line-height:1.5;margin-bottom:9px}
+.btn{display:block;width:100%;padding:10px 14px;border:none;border-radius:8px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:7px;text-align:center;transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--rosa);color:#FFFDF8}
+.btn-dark{background:var(--brown);color:var(--gold)}
+.btn-sage{background:var(--sage);color:#fff}
+.btn-purple{background:var(--purple);color:#fff}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-gold{background:var(--gold);color:var(--brown)}
+.btn-muted{background:var(--cream);color:var(--brown);border:1.5px solid var(--border)}
+.btn-sm{width:auto;padding:5px 12px;font-size:11px;margin-top:0}
+.btn-row{display:flex;gap:7px;margin-top:7px}
+.btn-row .btn{margin-top:0}
+.area{background:var(--cream);border-radius:8px;padding:11px;margin-top:7px;font-size:12px;line-height:1.75;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.area.placeholder{color:var(--muted);font-style:italic;min-height:52px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:22px;height:22px;border:3px solid var(--border);border-top-color:var(--rosa);border-radius:50%;animation:spin .75s linear infinite}
+.pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600}
+.pill-sage{background:var(--sage-l);color:#2a5a22;border:1px solid var(--sage)}
+.pill-gold{background:var(--gold-l);color:#5a3a08;border:1px solid var(--gold)}
+.pill-rosa{background:var(--rosa-l);color:#7a1a1a;border:1px solid var(--rosa)}
+.pill-muted{background:var(--cream);color:var(--muted);border:1px solid var(--border)}
+.pill-purple{background:var(--purple-l);color:#26215C;border:1px solid var(--purple)}
+.pill-blue{background:var(--blue-l);color:#042C53;border:1px solid var(--blue)}
+.pills-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.cal-nav-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-nav-btn{background:var(--cream);border:1.5px solid var(--border);border-radius:6px;width:30px;height:30px;font-size:18px;color:var(--brown);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-month{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--brown)}
+.post-item{display:flex;gap:9px;padding:9px;background:var(--card);border:1.5px solid var(--border);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s}
+.post-item:hover{border-color:var(--rosa);background:var(--rosa-l)}
+.post-item.selected{border-color:var(--rosa);background:var(--rosa-l)}
+.post-item.highlight-item{border-color:var(--gold)}
+.date-box{background:var(--brown);color:var(--gold);border-radius:6px;min-width:38px;text-align:center;padding:5px 4px;flex-shrink:0}
+.date-num{font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1}
+.date-dow{font-size:7px;text-transform:uppercase;letter-spacing:1px;opacity:.8}
+.post-info{flex:1;min-width:0}
+.post-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px;line-height:1.3}
+.post-tags{display:flex;gap:4px;flex-wrap:wrap}
+
+/* TABS */
+.tabs{display:flex;gap:3px;margin-bottom:12px;overflow-x:auto;padding-bottom:1px}
+.tab{flex:1;min-width:55px;padding:7px 3px;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--brown);border:1.5px solid var(--border);border-radius:6px;cursor:pointer;text-align:center;white-space:nowrap}
+.tab:hover{background:var(--border)}
+.tab.active{background:var(--card);border-color:var(--rosa);color:var(--rosa)}
+
+/* PROMPT BOX — caixa escura para copiar */
+.prompt-box{background:#1C0F05;border-radius:8px;padding:12px 12px 36px 12px;margin-top:7px;position:relative}
+.prompt-txt{font-size:11px;color:#EFE4D0;line-height:1.65;white-space:pre-wrap;max-height:200px;overflow-y:auto;word-break:break-word}
+.copy-btn{position:absolute;bottom:8px;right:8px;background:var(--gold);border:none;border-radius:4px;padding:4px 10px;font-size:10px;color:var(--brown);cursor:pointer;font-weight:700}
+.copy-btn:active{opacity:.75}
+
+/* CHECKLIST */
+.check-item{display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--card);border:1.5px solid var(--border);border-radius:8px;margin-bottom:5px;cursor:pointer}
+.check-item:hover{border-color:var(--sage)}
+.check-item.done{background:var(--sage-l);border-color:var(--sage)}
+.check-box{width:18px;height:18px;border-radius:4px;border:2px solid var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:#fff}
+.check-item.done .check-box{background:var(--sage);border-color:var(--sage)}
+.check-label{font-size:12px;color:var(--text)}
+.check-item.done .check-label{color:#2a5a22}
+.progress-bar-bg{background:var(--border);border-radius:20px;height:5px;margin-bottom:10px}
+.progress-bar{background:var(--sage);height:5px;border-radius:20px;transition:width .3s}
+
+/* FORM */
+.form-group{margin-bottom:10px}
+.form-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px}
+.form-input,.form-select,.form-textarea{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;background:var(--card);color:var(--text)}
+.form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--rosa)}
+.form-textarea{min-height:60px;resize:vertical;line-height:1.5}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.form-check{display:flex;align-items:center;gap:7px;cursor:pointer}
+.form-check input{width:15px;height:15px;cursor:pointer;accent-color:var(--rosa)}
+.form-check label{font-size:12px;color:var(--text);cursor:pointer}
+.modal-overlay{position:fixed;inset:0;background:rgba(62,34,8,.55);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.modal-box{background:var(--card);border-radius:16px 16px 0 0;padding:18px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--brown)}
+.modal-close{background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer}
+
+/* STORIES */
+.story-card{background:var(--card);border:1.5px solid var(--border);border-radius:10px;padding:11px;margin-bottom:7px}
+.story-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--brown);color:var(--gold);font-size:10px;font-weight:700;flex-shrink:0}
+.funnel-badge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;border:none}
+
+.foot{text-align:center;padding:7px;font-size:10px;color:var(--muted);background:var(--bg);border-top:1px solid var(--border);flex-shrink:0}
+
+/* GRID CALENDARIO */
+.cal-grid{width:100%;border-collapse:collapse;font-size:11px}
+.cal-grid th{padding:6px 2px;text-align:center;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border)}
+.cal-grid td{vertical-align:top;padding:3px;border:1px solid var(--border);min-height:52px;width:14.28%;position:relative;cursor:pointer}
+.cal-grid td:hover{background:var(--cream)}
+.cal-grid td.outro-mes{background:var(--bg);opacity:.4;cursor:default}
+.cal-grid td.hoje{background:var(--gold-l)}
+.cal-day-num{font-size:11px;font-weight:600;color:var(--muted);line-height:1;margin-bottom:2px}
+.cal-day-num.tem-post{color:var(--brown)}
+.cal-ev{font-size:8px;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px}
+.cal-post-badge{display:block;font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cal-post-badge.reel{background:var(--sage-l);color:#2a5a22;border:1px solid var(--sage)}
+.cal-post-badge.carrossel{background:var(--gold-l);color:#5a3a08;border:1px solid var(--gold)}
+.cal-post-badge.imagem{background:var(--rosa-l);color:#7a1a1a;border:1px solid var(--rosa)}
+.cal-post-badge.highlight{border-width:2px}
+.cal-post-badge.publicado{opacity:.6}
+.cal-view-toggle{display:flex;gap:4px;margin-bottom:8px}
+.cal-view-btn{padding:4px 10px;font-size:11px;font-weight:600;border:1.5px solid var(--border);border-radius:6px;background:var(--cream);color:var(--brown);cursor:pointer}
+.cal-view-btn.active{background:var(--brown);color:var(--gold);border-color:var(--brown)}
+
+/* PROMPT SAVED BADGE */
+.prompt-saved{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#2a5a22;background:var(--sage-l);border:1px solid var(--sage);border-radius:12px;padding:2px 8px;margin-left:6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <div><div class="hdr-title">AURA ✦</div><div class="hdr-sub" id="hdr-handle">@marianabotelho.pt</div>
+    <div style="font-size:8px;color:var(--gold);opacity:.5;letter-spacing:1.5px;" id="hdr-version">v4.2.0</div></div>
+    <button class="hdr-badge" onclick="setMod(5)">⚙ Config</button>
+  </div>
+  <div class="nav" id="nav-bar">
+    <button class="nav-btn active" id="nb-0" onclick="setMod(0)">◉ Dash</button>
+    <button class="nav-btn" id="nb-1" onclick="setMod(1)">◫ Cal</button>
+    <button class="nav-btn" id="nb-2" onclick="setMod(2)">✦ Post</button>
+    <button class="nav-btn" id="nb-3" onclick="setMod(3)">📱 Stories</button>
+    <button class="nav-btn" id="nb-4" onclick="setMod(4)">🎯 Ads</button>
+    <button class="nav-btn" id="nb-5" onclick="setMod(5)">⚙ Config</button>
+    <button class="nav-btn" id="nb-6" onclick="setMod(6)">📥 Project</button>
+  </div>
+  <div class="body" id="body"></div>
+  <div class="foot" id="foot-txt">@marianabotelho.pt · Publicar às 13h00 · Mín. 3 posts/semana · Stories diários</div>
+<div style="text-align:center;padding:2px;font-size:9px;color:var(--muted);background:var(--bg);letter-spacing:1px;" id="version-bar">AURA v4.2.0 · 2026-05-26</div>
+</div>
+<div id="modal" style="display:none" class="modal-overlay" onclick="fecharModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title"></span>
+      <button class="modal-close" onclick="fecharModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+
+// ═══ LOCALSTORAGE ════════════════════════════════════════════════════════════
+var LS={
+  get:function(k){try{var v=localStorage.getItem("aura_"+k);return v?JSON.parse(v):null;}catch(e){return null;}},
+  set:function(k,v){try{localStorage.setItem("aura_"+k,JSON.stringify(v));}catch(e){}},
+  del:function(k){try{localStorage.removeItem("aura_"+k);}catch(e){}}
+};
+
+// ═══ VERSÃO ══════════════════════════════════════════════════════════════════
+var AURA_VERSION = {
+  version: "4.2.0",
+  build:   "2026-05-26",
+  label:   "AURA v4.2.0 · 2026-05-26"
+};
+
+
+// ═══ CONFIGURAÇÃO — 100% dinâmica, tudo sai daqui ══════════════════════════════
+var CFG_DEFAULT = {
+  // IDENTIDADE
+  handle:        "@marianabotelho.pt",
+  nome:          "Mariana Botelho",
+  titulo:        "Terapeuta Holística | Farmacêutica PT/BR",
+  localizacao:   "Oeiras, Portugal",
+  website:       "bio.site/marianabotelho.pt",
+
+  // POSICIONAMENTO
+  descricao:     "Terapeuta holística com formação em Farmácia, Reiki Mestre, HAM/HET Host. Guio mulheres no caminho de volta ao seu centro, integrando ciência e sabedoria ancestral.",
+  proposta:      "Integro o saber científico da Farmácia com as terapias energéticas e a sabedoria das plantas para te guiar num processo de transformação real e duradouro.",
+  audiencia:     "Mulheres 40-60 anos, Portugal e Brasil. Em transição de vida, a procurar equilíbrio emocional, reconexão com o próprio corpo e sabedoria interior.",
+  tom:           "Íntimo, poético, directo. Tuteia. Português de Portugal. Autoridade com proximidade. Emojis moderados (máx 3). Nunca linguagem de vendas agressiva.",
+
+  // SERVIÇOS (por ordem de prioridade)
+  servicos: [
+    {nome:"Consulta Individual",     desc:"Sessão personalizada integrando as terapias adequadas ao teu momento.",  preco:"A definir", tipo:"servico"},
+    {nome:"Ativação HAM",             desc:"Harmonia, Amor e Manifestação — activação energética individual.",         preco:"A definir", tipo:"servico"},
+    {nome:"Ativação HET",             desc:"Harmonia, Equilíbrio e Transformação — activação energética individual.", preco:"A definir", tipo:"servico"},
+    {nome:"Reiki Usui",               desc:"Sessão de Reiki para reequilíbrio energético e emocional.",               preco:"A definir", tipo:"servico"},
+    {nome:"Leitura de Aura",          desc:"Leitura e interpretação do campo energético.",                            preco:"A definir", tipo:"servico"},
+    {nome:"Workshops Cosméticos",     desc:"Aprende a criar os teus próprios cosméticos naturais com óleos essenciais.", preco:"A definir", tipo:"workshop"},
+    {nome:"Imersão Meditativa",       desc:"Experiência profunda de meditação e reconexão.",                          preco:"A definir", tipo:"workshop"},
+    {nome:"Retiro HAM",               desc:"Retiro presencial de activação HAM em grupo.",                            preco:"A definir", tipo:"workshop"}
+  ],
+
+  // PRODUTOS (segundo plano)
+  produtos: [
+    {nome:"Elixir Limpeza",   desc:"Spray energético de limpeza com ervas e cristais. 100ml.",  preco:"38€"},
+    {nome:"Escalda-pés",      desc:"Ritual de escalda-pés com ervas medicinais.",               preco:"A definir"},
+    {nome:"Cosméticos",       desc:"Cosméticos naturais artesanais com óleos essenciais.",      preco:"A definir"}
+  ],
+
+  // PILARES DE CONTEÚDO
+  pilares: [
+    {nome:"Educação",    pct:50, desc:"Explicar terapias, plantas, rituais, ciência por trás do espiritual"},
+    {nome:"Bastidores",  pct:20, desc:"O dia a dia como terapeuta, preparação de sessões, o espaço"},
+    {nome:"Serviços",    pct:15, desc:"Promover consultas, workshops e imersões"},
+    {nome:"Produtos",    pct:10, desc:"Elixir e outros produtos — contexto de uso, não de loja"},
+    {nome:"Depoimentos", pct:5,  desc:"Partilhar transformações de clientes (com autorização)"}
+  ],
+
+  // CTAs POR CATEGORIA
+  ctasServicos:  "CONSULTA, SESSAO, WORKSHOP, IMERSAO, AGENDA, LISTA, ESPERA, RETIRO",
+  ctasEducacao:  "QUERO SABER, REIKI, FITOTERAPIA, APOMETRIA, AURA, PLANTAS, HAM, HET",
+  ctasComunidade:"EU VOLTEI, COMIGO, SINTO, SIM, QUERO",
+  ctasProdutos:  "ELIXIR, ESCALDA, COSMETICOS",
+  // Todos os CTAs num string (para uso em prompts)
+  get ctas(){ return [this.ctasServicos, this.ctasEducacao, this.ctasComunidade, this.ctasProdutos].join(", "); },
+
+  // FORMATO DE REELS (voice-over com imagens — estilo actual dela)
+  formatoReels:  "Voice-over com imagens de natureza, rituais e bastidores. Sem falar directamente para a câmara.",
+  ambientes:     "Natureza (floresta, rio, plantas), espaço de terapia, ritual com ervas e cristais, bastidores de preparação.",
+
+  // FERRAMENTAS DISPONÍVEIS
+  ferramentas: [
+    {nome:"Gemini Plus",  uso:"Geração de imagens (Imagen 3) e vídeos curtos para Reels"},
+    {nome:"Canva",        uso:"Design de carrosseis, stories, imagens com texto, templates"},
+    {nome:"CapCut Pro",   uso:"Montagem de Reels — voice-over, legendas automáticas, música, cortes"}
+  ],
+
+  // SETTINGS
+  budgetAds:    50,
+  ofertaAtiva:  "",
+  horarioPost:  "13h00",
+  freqSemanal:  3
+};
+
+var CFG = Object.assign({}, CFG_DEFAULT, LS.get("cfg") || {});
+
+// Helpers para aceder aos dados do CFG
+function cfgServicosStr(){
+  return (CFG.servicos||[]).map(function(s){return s.nome+(s.preco&&s.preco!=="A definir"?" ("+s.preco+")":"");}).join(", ");
+}
+function cfgProdutosStr(){
+  return (CFG.produtos||[]).map(function(p){return p.nome+(p.preco&&p.preco!=="A definir"?" — "+p.preco:"");}).join(", ");
+}
+function cfgFerramentasStr(){
+  return (CFG.ferramentas||[]).map(function(f){return f.nome+": "+f.uso;}).join(". ");
+}
+
+function salvarCFG(){ LS.set("cfg", CFG); }
+
+// ═══ STATE ═══════════════════════════════════════════════════════════════════
+var STATE={
+  mod:0,sel:null,
+  mes:new Date().getMonth()+1,
+  ano:new Date().getFullYear(),
+  tab:0,
+  posts:[],
+  chk:LS.get("chk")||{},
+  dash:LS.get("dash")||{},
+  prompts:LS.get("prompts")||{},  // prompts gerados por post
+  calView:LS.get("calView")||"grid",  // "grid" ou "lista"
+  aiLoading:false
+};
+
+function savePrompts(){ LS.set("prompts", STATE.prompts); }
+function setCalView(v){ STATE.calView=v; LS.set("calView",v); renderBody(); }
+
+function saveChk(){LS.set("chk",STATE.chk);}
+function saveDash(){LS.set("dash",STATE.dash);}
+
+// ═══ CONSTANTES ══════════════════════════════════════════════════════════════
+var MESES=["","Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+var DOWS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+var EVENTOS={
+  1:[
+    {d:1,l:"Portal 1/1 — Novo ciclo ✨"},{d:6,l:"Dia dos Reis 👑"},
+    {d:13,l:"Lua Cheia em Câncer 🌕"},{d:20,l:"Sol em Aquário ♒"},
+    {d:25,l:"Dia Internacional da Educação 📚"},{d:28,l:"Lua Nova em Aquário 🌑"}
+  ],
+  2:[
+    {d:2,l:"Portal 2/2 ✨"},{d:4,l:"Dia Mundial do Cancro — Prevenção 🎗️"},
+    {d:12,l:"Lua Cheia em Leão 🌕"},{d:14,l:"Dia dos Namorados 💕"},
+    {d:17,l:"Sol em Peixes ♓"},{d:27,l:"Lua Nova em Peixes 🌑"}
+  ],
+  3:[
+    {d:8,l:"Dia Internacional da Mulher 💐"},{d:14,l:"Lua Cheia em Virgem 🌕"},
+    {d:20,l:"Equinócio de Primavera — Ostara 🌸"},{d:20,l:"Sol em Áries ♈"},
+    {d:21,l:"Dia Internacional das Florestas 🌿"},{d:28,l:"Lua Nova em Áries 🌑"}
+  ],
+  4:[
+    {d:4,l:"Portal 4/4 ✨"},{d:7,l:"Dia Mundial da Saúde 💚"},
+    {d:13,l:"Lua Cheia em Balança 🌕"},{d:19,l:"Sol em Touro ♉"},
+    {d:22,l:"Dia da Terra 🌍"},{d:27,l:"Lua Nova em Touro 🌑"}
+  ],
+  5:[
+    {d:1,l:"Beltane — Festival da fertilidade 🌺"},{d:12,l:"Lua Cheia em Escorpião 🌕"},
+    {d:17,l:"Dia Internacional da Fitoterapia 🌿"},{d:20,l:"Sol em Gémeos ♊"},
+    {d:21,l:"Dia Internacional da Biodiversidade 🦋"},{d:26,l:"Lua Nova em Gémeos 🌑"}
+  ],
+  6:[
+    {d:5,l:"Dia Mundial do Ambiente 🌍"},{d:6,l:"Portal 6/6 ✨"},
+    {d:11,l:"Lua Cheia em Sagitário 🌕"},{d:21,l:"Solstício de Verão — Litha ☀️"},
+    {d:21,l:"Sol em Câncer ♋"},{d:25,l:"Lua Nova em Câncer 🌑"}
+  ],
+  7:[
+    {d:7,l:"Portal 7/7 ✨"},{d:10,l:"Lua Cheia em Capricórnio 🌕"},
+    {d:17,l:"Dia Mundial da Justiça 🔮"},{d:22,l:"Sol em Leão ♌"},
+    {d:24,l:"Lua Nova em Leão 🌑"}
+  ],
+  8:[
+    {d:1,l:"Lammas — Colheita e gratidão 🌾"},{d:8,l:"Portal do Leão 8/8 🦁"},
+    {d:9,l:"Lua Cheia em Aquário 🌕"},{d:22,l:"Sol em Virgem ♍"},
+    {d:22,l:"Lua Nova em Virgem 🌑"}
+  ],
+  9:[
+    {d:7,l:"Lua Cheia em Peixes 🌕"},{d:8,l:"Dia Internacional da Literacia 📚"},
+    {d:21,l:"Lua Nova em Balança 🌑"},{d:22,l:"Equinócio de Outono — Mabon 🍂"},
+    {d:22,l:"Sol em Balança ♎"},{d:29,l:"Dia Mundial do Coração 💚"}
+  ],
+  10:[
+    {d:1,l:"Dia Mundial da Medicina 🌿"},{d:6,l:"Lua Cheia em Áries 🌕"},
+    {d:21,l:"Lua Nova em Escorpião 🌑"},{d:23,l:"Sol em Escorpião ♏"},
+    {d:31,l:"Samhain — Véu fino entre mundos 🎃"}
+  ],
+  11:[
+    {d:5,l:"Lua Cheia em Touro 🌕"},{d:11,l:"Portal 11/11 ✨"},
+    {d:19,l:"Lua Nova em Sagitário 🌑"},{d:21,l:"Sol em Sagitário ♐"},
+    {d:26,l:"Dia Nacional da Saúde PT 💚"}
+  ],
+  12:[
+    {d:4,l:"Lua Cheia em Gémeos 🌕"},{d:12,l:"Portal 12/12 ✨"},
+    {d:19,l:"Lua Nova em Capricórnio 🌑"},{d:21,l:"Sol em Capricórnio ♑"},
+    {d:21,l:"Solstício de Inverno — Yule ❄️"},{d:25,l:"Natal 🎄"}
+  ]
+};
+
+var EXEMPLO_JUNHO=[
+  {id:"2026-06-01",dia:1,dow:1,type:"REEL",phase:"reativacao",
+   title:"Regresso — Estive em silêncio. Hoje volto.",
+   servico:"",produto:"",cta:"EU VOLTEI",spiritual:null,highlight:false,status:"pending",
+   pilar:"bastidores"},
+  {id:"2026-06-03",dia:3,dow:3,type:"CARROSSEL",phase:"reativacao",
+   title:"O que é o Reiki — desmistificar a terapia energética",
+   servico:"Reiki Usui",produto:"",cta:"REIKI",spiritual:null,highlight:false,status:"pending",
+   pilar:"educacao"},
+  {id:"2026-06-06",dia:6,dow:6,type:"REEL",phase:"reativacao",
+   title:"Portal 6/6 — Ritual de harmonização simples que podes fazer em casa",
+   servico:"",produto:"Elixir Limpeza",cta:"PORTAL",spiritual:"Portal 6/6 ✨",highlight:true,status:"pending",
+   pilar:"educacao"},
+  {id:"2026-06-08",dia:8,dow:1,type:"IMAGEM",phase:"reativacao",
+   title:"Bastidores — como preparo um espaço de sessão",
+   servico:"Consulta Individual",produto:"",cta:"SESSAO",spiritual:null,highlight:false,status:"pending",
+   pilar:"bastidores"},
+  {id:"2026-06-11",dia:11,dow:4,type:"REEL",phase:"consistencia",
+   title:"Lua Cheia em Sagitário — o que esta lua pede de ti",
+   servico:"",produto:"",cta:"LUA",spiritual:"Lua Cheia em Sagitário 🌕",highlight:true,status:"pending",
+   pilar:"educacao"},
+  {id:"2026-06-13",dia:13,dow:6,type:"CARROSSEL",phase:"consistencia",
+   title:"Fitoterapia ocidental vs oriental — as diferenças que precisas de saber",
+   servico:"Consulta Individual",produto:"",cta:"FITOTERAPIA",spiritual:null,highlight:false,status:"pending",
+   pilar:"educacao"},
+  {id:"2026-06-17",dia:17,dow:3,type:"CARROSSEL",phase:"consistencia",
+   title:"O que é a Ativação HAM e como pode transformar a tua vida",
+   servico:"Ativação HAM",produto:"",cta:"HAM",spiritual:null,highlight:false,status:"pending",
+   pilar:"educacao"},
+  {id:"2026-06-20",dia:20,dow:6,type:"IMAGEM",phase:"consistencia",
+   title:"Bastidores — Workshop de Cosméticos Naturais com óleos essenciais",
+   servico:"Workshops Cosméticos",produto:"",cta:"WORKSHOP",spiritual:null,highlight:false,status:"pending",
+   pilar:"servicos"},
+  {id:"2026-06-21",dia:21,dow:1,type:"REEL",phase:"conversao",
+   title:"Solstício de Verão — o que este portal de luz traz para a tua cura",
+   servico:"Imersão Meditativa",produto:"",cta:"IMERSAO",spiritual:"Solstício de Verão ☀️",highlight:true,status:"pending",
+   pilar:"educacao"},
+  {id:"2026-06-24",dia:24,dow:4,type:"CARROSSEL",phase:"conversao",
+   title:"3 sinais de que o teu campo energético precisa de limpeza",
+   servico:"Consulta Individual",produto:"Elixir Limpeza",cta:"CONSULTA",spiritual:null,highlight:false,status:"pending",
+   pilar:"educacao"},
+  {id:"2026-06-25",dia:25,dow:5,type:"REEL",phase:"conversao",
+   title:"Lua Nova em Câncer — ritual de intenção para semear o que queres colher",
+   servico:"",produto:"",cta:"LISTA",spiritual:"Lua Nova em Câncer 🌑",highlight:true,status:"pending",
+   pilar:"educacao"},
+  {id:"2026-06-29",dia:29,dow:1,type:"IMAGEM",phase:"conversao",
+   title:"Como a Farmácia e o Reiki se encontraram na minha vida",
+   servico:"Consulta Individual",produto:"",cta:"SESSAO",spiritual:null,highlight:false,status:"pending",
+   pilar:"bastidores"}
+];
+
+// ═══ DADOS WINDSOR (actualizar periodicamente) ══════════════════════════════
+var WINDSOR={
+  followers:1208, follows:1907, media:36, daysSince:137,
+  reach30:747, eng30:81, views30:2424,
+  daily:[
+    {d:"24/04",v:1},{d:"25/04",v:2},{d:"03/05",v:96},{d:"04/05",v:50},
+    {d:"11/05",v:150},{d:"12/05",v:45},{d:"14/05",v:62},{d:"15/05",v:33},
+    {d:"18/05",v:82},{d:"19/05",v:47},{d:"23/05",v:44}
+  ],
+  genderAge:[
+    {n:"F.45-54",v:341},{n:"F.35-44",v:229},{n:"F.55-64",v:151},
+    {n:"F.65+",v:79},{n:"F.25-34",v:75},{n:"M.45-54",v:43},{n:"U.45-54",v:53}
+  ],
+  countries:[{n:"Portugal",v:947},{n:"Brasil",v:177},{n:"Espanha",v:13},{n:"Outros",v:26}],
+  topPosts:[
+    {type:"REEL",date:"Mar 2025",caption:"HAM/HET — Abre o teu coração e dá o primeiro passo",eng:168,reach:1684,likes:123,comments:26,saves:8,shares:10,watchTime:13.3},
+    {type:"REEL",date:"Dez 2024",caption:"Historia do Elixir — como tudo comecou",eng:137,reach:803,likes:100,comments:20,saves:6,shares:10,watchTime:12.6},
+    {type:"REEL",date:"Dez 2024",caption:"12 Noites Santas — deixa nos comentarios",eng:108,reach:1051,likes:52,comments:48,saves:1,shares:7,watchTime:11.9},
+    {type:"REEL",date:"Dez 2025",caption:"Ponto Zero — escreve EU QUERO nos comentarios",eng:104,reach:600,likes:44,comments:45,saves:1,shares:10,watchTime:11.0},
+    {type:"IMAGEM",date:"Nov 2024",caption:"Collab — Imersao dos Sonhos com Alice Monteiro",eng:99,reach:1374,likes:55,comments:19,saves:4,shares:21,watchTime:null}
+  ]
+};
+
+// ═══ API CLAUDE (só para análises) ═══════════════════════════════════════════
+function claude(prompt,cb,sistema,tokens){
+  fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:tokens||800,
+      system:sistema||"Responde em português de Portugal. Retorna APENAS JSON válido, sem markdown.",
+      messages:[{role:"user",content:prompt}]})
+  }).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.error){cb(new Error(d.error.message),null);return;}
+    cb(null,d.content&&d.content[0]?d.content[0].text:"");
+  }).catch(function(e){cb(e,null);});
+}
+
+function parseJ(raw,fb){
+  if(!raw)return fb;
+  try{
+    var clean=raw.replace(/```json/gi,"").replace(/```/g,"").trim();
+    var s=clean.indexOf("{"),e=clean.lastIndexOf("}");
+    if(s<0||e<0)return fb;
+    try{return JSON.parse(clean.slice(s,e+1));}catch(e1){}
+    var result={};
+    var re=/"(\w+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g,m;
+    while((m=re.exec(clean.slice(s,e+1)))!==null)result[m[1]]=m[2].replace(/\\n/g,"\n");
+    var arrM=clean.slice(s,e+1).match(/"(\w+)"\s*:\s*\[([\s\S]*?)\]/g);
+    if(arrM)arrM.forEach(function(a){
+      var km=a.match(/"(\w+)"/),vm=a.match(/\[([\s\S]*)\]/);
+      if(km&&vm){result[km[1]]=(vm[1].match(/"((?:[^"\\]|\\.)*)"/g)||[]).map(function(s2){return s2.slice(1,-1).replace(/\\n/g,"\n");});}
+    });
+    return Object.keys(result).length?result:fb;
+  }catch(e){return fb;}
+}
+
+// ═══ HELPERS UI ══════════════════════════════════════════════════════════════
+function pad(n){return String(n).padStart(2,"0");}
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/'/g,"&#39;").replace(/"/g,"&quot;");}
+function cpText(id){
+  var el=document.getElementById(id);if(!el)return;
+  var txt=el.textContent||el.innerText||"";
+  try{
+    var ta=document.createElement("textarea");ta.value=txt;ta.style.cssText="position:fixed;top:-9999px;left:-9999px;opacity:0;";
+    document.body.appendChild(ta);ta.focus();ta.select();document.execCommand("copy");document.body.removeChild(ta);
+    var btn=event&&event.target;if(btn){var orig=btn.textContent;btn.textContent="✓ Copiado";setTimeout(function(){btn.textContent=orig;},1600);}
+  }catch(e){}
+}
+function spinner(txt){return '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 0;"><div class="spinner"></div>'+(txt?'<div style="font-size:11px;color:var(--muted);">'+esc(txt)+'</div>':'')+'</div>';}
+function pillTipo(t){var m={REEL:"pill-sage",CARROSSEL:"pill-gold",IMAGEM:"pill-rosa"};return '<span class="pill '+(m[t]||"pill-muted")+'">'+esc(t)+"</span>";}
+function pillPhase(p){var l={reativacao:"Reativação",consistencia:"Consistência",conversao:"Conversão"};var c={reativacao:"pill-sage",consistencia:"pill-gold",conversao:"pill-rosa"};return '<span class="pill '+(c[p]||"pill-muted")+'">'+(l[p]||esc(p))+"</span>";}
+function pillStatus(s){var l={pending:"Pendente",producao:"Em Produção",pronto:"Pronto",publicado:"Publicado ✓"};var c={pending:"pill-muted",producao:"pill-gold",pronto:"pill-sage",publicado:"pill-sage"};return '<span class="pill '+(c[s]||"pill-muted")+'">'+(l[s]||esc(s))+"</span>";}
+
+// ═══ GESTÃO DE POSTS ══════════════════════════════════════════════════════════
+function getCalKey(){return STATE.ano+"-"+STATE.mes;}
+function carregarPosts(){
+  var saved=LS.get("posts_"+getCalKey());
+  if(saved){STATE.posts=saved;return;}
+  if(STATE.ano===2026&&STATE.mes===6){STATE.posts=EXEMPLO_JUNHO.slice();LS.set("posts_"+getCalKey(),STATE.posts);return;}
+  STATE.posts=[];
+}
+function salvarPosts(){LS.set("posts_"+getCalKey(),STATE.posts);}
+function novoPostObj(f){
+  var dia=f.dia||1;
+  return{id:STATE.ano+"-"+pad(STATE.mes)+"-"+pad(dia)+"_"+Date.now(),
+    dia:dia,dow:new Date(STATE.ano,STATE.mes-1,dia).getDay(),
+    type:f.type||"REEL",phase:f.phase||"consistencia",
+    title:f.title||"",
+    servico:f.servico||"",
+    produto:f.produto||f.product||"",
+    pilar:f.pilar||"educacao",
+    cta:f.cta||"",
+    spiritual:f.spiritual||null,highlight:f.highlight||false,status:"pending"};
+}
+function adicionarPost(f){var p=novoPostObj(f);STATE.posts.push(p);STATE.posts.sort(function(a,b){return a.dia-b.dia;});salvarPosts();STATE.sel=p;return p;}
+function atualizarPost(id,f){
+  for(var i=0;i<STATE.posts.length;i++){if(STATE.posts[i].id===id){
+    var p=STATE.posts[i];
+    if(f.type)p.type=f.type;if(f.phase)p.phase=f.phase;
+    if(f.title!==undefined)p.title=f.title;if(f.product!==undefined)p.product=f.product;
+    if(f.cta!==undefined)p.cta=f.cta;if(f.spiritual!==undefined)p.spiritual=f.spiritual;
+    if(f.highlight!==undefined)p.highlight=f.highlight;if(f.status)p.status=f.status;
+    salvarPosts();STATE.sel=p;return p;
+  }}
+}
+function apagarPost(id){
+  STATE.posts=STATE.posts.filter(function(p){return p.id!==id;});
+  salvarPosts();delete STATE.chk[id];saveChk();
+  if(STATE.sel&&STATE.sel.id===id)STATE.sel=null;
+}
+function atualizarStatus(id,s){
+  for(var i=0;i<STATE.posts.length;i++){if(STATE.posts[i].id===id){STATE.posts[i].status=s;salvarPosts();if(STATE.sel&&STATE.sel.id===id)STATE.sel=STATE.posts[i];break;}}
+}
+
+// ═══ NAVEGAÇÃO ═══════════════════════════════════════════════════════════════
+function setMod(m){
+  if(m===2&&!STATE.sel){abrirFormPost(null);return;}
+  STATE.mod=m;STATE.tab=0;
+  for(var i=0;i<7;i++){var b=document.getElementById("nb-"+i);if(b)b.className="nav-btn"+(i===m?" active":"");}
+  renderBody();
+}
+function selPost(id){carregarPosts();for(var i=0;i<STATE.posts.length;i++){if(STATE.posts[i].id===id){STATE.sel=STATE.posts[i];break;}}renderBody();}
+function abrirPost(id){
+  selPost(id);STATE.mod=2;STATE.tab=0;
+  for(var i=0;i<5;i++){var b=document.getElementById("nb-"+i);if(b)b.className="nav-btn"+(i===2?" active":"");}
+  renderBody();
+}
+function chMes(d){
+  STATE.mes+=d;if(STATE.mes>12){STATE.mes=1;STATE.ano++;}if(STATE.mes<1){STATE.mes=12;STATE.ano--;}
+  STATE.sel=null;carregarPosts();renderBody();
+}
+function setTab(t){
+  STATE.tab=t;var el=document.getElementById("tabc");if(!el||!STATE.sel)return;
+  var p=STATE.sel;
+  var tabs=[tabTexto,tabImagem,tabStories,tabProducao,tabAds];
+  if(tabs[t])el.innerHTML=tabs[t](p);
+}
+
+// ═══ MODAIS ═══════════════════════════════════════════════════════════════════
+function fecharModal(){document.getElementById("modal").style.display="none";}
+function abrirFormPost(existente){
+  var isEdit=!!existente;var p=existente||{};
+  var dMax=new Date(STATE.ano,STATE.mes,0).getDate();
+  var ops="";for(var d=1;d<=dMax;d++)ops+='<option value="'+d+'"'+(p.dia===d?" selected":"")+'>'+d+' de '+MESES[STATE.mes]+'</option>';
+  document.getElementById("modal-title").textContent=isEdit?"Editar Post":"Novo Post";
+  document.getElementById("modal-body").innerHTML=
+    '<div class="form-group"><label class="form-label">Data</label><select class="form-select" id="f-dia">'+ops+'</select></div>'
+    +'<div class="form-grid">'
+    +'<div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="f-type">'
+    +'<option value="REEL"'+(p.type==="REEL"?" selected":"")+'>Reel</option>'
+    +'<option value="CARROSSEL"'+(p.type==="CARROSSEL"?" selected":"")+'>Carrossel</option>'
+    +'<option value="IMAGEM"'+(p.type==="IMAGEM"?" selected":"")+'>Imagem</option>'
+    +'</select></div>'
+    +'<div class="form-group"><label class="form-label">Fase do Funil</label><select class="form-select" id="f-phase">'
+    +'<option value="reativacao"'+(p.phase==="reativacao"?" selected":"")+'>Reativação</option>'
+    +'<option value="consistencia"'+(p.phase==="consistencia"?" selected":"")+'>Consistência</option>'
+    +'<option value="conversao"'+(p.phase==="conversao"?" selected":"")+'>Conversão</option>'
+    +'</select></div></div>'
+    +'<div class="form-group"><label class="form-label">Título / Ideia</label>'
+    +'<input class="form-input" id="f-title" placeholder="Ex: Lua Cheia em Sagitário — libertar o que ficou..." value="'+esc(p.title||"")+'"></div>'
+    +'<div class="form-grid">'
+    +'<div class="form-group"><label class="form-label">Produto</label><input class="form-input" id="f-product" placeholder="Ex: Elixir Limpeza" value="'+esc(p.product||"")+'"></div>'
+    +'<div class="form-group"><label class="form-label">CTA (keyword)</label><input class="form-input" id="f-cta" placeholder="Ex: LUA" value="'+esc(p.cta||"")+'"></div></div>'
+    +'<div class="form-group"><label class="form-label">Data Espiritual</label>'
+    +'<input class="form-input" id="f-spiritual" placeholder="Ex: Lua Cheia Sagitário, Portal 7/7..." value="'+esc(p.spiritual||"")+'"></div>'
+    +'<div class="form-group"><label class="form-check"><input type="checkbox" id="f-highlight"'+(p.highlight?" checked":"")+'>  Destaque do mês (borda dourada)</label></div>'
+    +'<div class="btn-row"><button class="btn btn-muted" style="flex:1" onclick="fecharModal()">Cancelar</button>'
+    +'<button class="btn btn-primary" style="flex:2" onclick="guardarPost('+(isEdit?"'"+esc(p.id)+"'":'null')+')">'+( isEdit?"Guardar":"Criar Post")+'</button></div>';
+  document.getElementById("modal").style.display="flex";
+}
+function guardarPost(existenteId){
+  var title=document.getElementById("f-title").value.trim();
+  if(!title){alert("Adiciona um título.");return;}
+  var f={dia:parseInt(document.getElementById("f-dia").value),type:document.getElementById("f-type").value,
+    phase:document.getElementById("f-phase").value,title:title,
+    product:document.getElementById("f-product").value.trim(),
+    cta:document.getElementById("f-cta").value.trim(),
+    spiritual:document.getElementById("f-spiritual").value.trim()||null,
+    highlight:document.getElementById("f-highlight").checked};
+  if(existenteId)atualizarPost(existenteId,f);else adicionarPost(f);
+  fecharModal();STATE.mod=2;STATE.tab=0;
+  for(var i=0;i<5;i++){var b=document.getElementById("nb-"+i);if(b)b.className="nav-btn"+(i===2?" active":"");}
+  renderBody();
+}
+function abrirConfig(){
+  document.getElementById("modal-title").textContent="Configuração do Perfil";
+  document.getElementById("modal-body").innerHTML=
+    '<div class="alert-sage">Estes dados são usados em todos os prompts. Personaliza para o teu perfil.</div>'
+    +'<div class="form-group"><label class="form-label">Handle Instagram</label><input class="form-input" id="cfg-handle" value="'+esc(CFG.handle)+'"></div>'
+    +'<div class="form-group"><label class="form-label">Descrição do Perfil</label><textarea class="form-textarea" id="cfg-desc">'+esc(CFG.descricao)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Audiência</label><textarea class="form-textarea" id="cfg-aud">'+esc(CFG.audiencia)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Tom de Voz</label><textarea class="form-textarea" id="cfg-tom">'+esc(CFG.tom)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Produtos</label><textarea class="form-textarea" id="cfg-prod">'+esc(CFG.produtos)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">CTAs (palavras-chave)</label><input class="form-input" id="cfg-ctas" value="'+esc(CFG.ctas)+'"></div>'
+    +'<div class="form-group"><label class="form-label">Oferta activa</label><input class="form-input" id="cfg-oferta" value="'+esc(CFG.ofertaAtiva)+'"></div>'
+    +'<div class="form-group"><label class="form-label">Orçamento Ads (€/mês)</label><input class="form-input" type="number" id="cfg-budget" value="'+CFG.budgetAds+'"></div>'
+    +'<button class="btn btn-dark" onclick="salvarConfig()">✦ Guardar</button>';
+  document.getElementById("modal").style.display="flex";
+}
+// salvarConfig moved to configHTML tab
+
+function confirmarApagar(id){
+  document.getElementById("modal-title").textContent="Apagar Post?";
+  document.getElementById("modal-body").innerHTML=
+    '<div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Esta acção não pode ser desfeita.</div>'
+    +'<div class="btn-row"><button class="btn btn-muted" style="flex:1" onclick="fecharModal()">Cancelar</button>'
+    +'<button class="btn btn-primary" style="flex:1" onclick="execApagar(\''+esc(id)+'\')">Apagar</button></div>';
+  document.getElementById("modal").style.display="flex";
+}
+function execApagar(id){apagarPost(id);fecharModal();STATE.mod=1;for(var i=0;i<5;i++){var b=document.getElementById("nb-"+i);if(b)b.className="nav-btn"+(i===1?" active":"");}renderBody();}
+
+// ═══ RENDER PRINCIPAL ═════════════════════════════════════════════════════════
+function renderBody(){
+  var el=document.getElementById("body");if(!el)return;
+  carregarPosts();
+  if(STATE.mod===0)el.innerHTML=dashHTML();
+  else if(STATE.mod===1)el.innerHTML=calHTML();
+  else if(STATE.mod===2)el.innerHTML=postHTML();
+  else if(STATE.mod===3)el.innerHTML=storiesHTML();
+  else if(STATE.mod===4)el.innerHTML=adsHTML();
+  else if(STATE.mod===5)el.innerHTML=configHTML();
+  else if(STATE.mod===6)el.innerHTML=projectHTML();
+}
+
+// ═══ DASHBOARD ════════════════════════════════════════════════════════════════
+function dashHTML(){
+  var dA=STATE.dash||{};
+  var W=WINDSOR;
+  var engRate=(W.followers>0?((W.eng30/30)/W.followers*100).toFixed(2):"0.00");
+
+  function sparkline(data){
+    if(!data||!data.length)return"";
+    var vals=data.map(function(d){return d.v||0;});
+    var mx=Math.max.apply(null,vals)||1,w=160,h=32;
+    var pts=vals.map(function(v,i){return(i/(vals.length-1)*w).toFixed(1)+","+(h-v/mx*(h-4)).toFixed(1);}).join(" ");
+    return'<svg width="'+w+'" height="'+h+'" style="display:block;"><polyline points="'+pts+'" fill="none" stroke="var(--sage)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+
+  // Audience bars
+  var gaTotal=W.genderAge.reduce(function(s,g){return s+g.v;},0)||1;
+  var gaBars=W.genderAge.slice(0,5).map(function(g){
+    var pct=Math.round(g.v/gaTotal*100);
+    var col=g.n.startsWith("F.")?"var(--rosa)":g.n.startsWith("M.")?"var(--blue)":"var(--muted)";
+    return'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
+      +'<div style="font-size:10px;color:var(--text);min-width:52px;">'+esc(g.n)+'</div>'
+      +'<div style="flex:1;background:var(--border);border-radius:3px;height:7px;overflow:hidden;">'
+      +'<div style="width:'+pct+'%;height:100%;background:'+col+';border-radius:3px;"></div></div>'
+      +'<div style="font-size:10px;font-weight:600;color:var(--muted);min-width:26px;">'+pct+'%</div></div>';
+  }).join("");
+
+  var ctTotal=W.countries.reduce(function(s,c){return s+c.v;},0)||1;
+  var ctBars=W.countries.slice(0,4).map(function(c){
+    var pct=Math.round(c.v/ctTotal*100);
+    return'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
+      +'<div style="font-size:10px;color:var(--text);min-width:52px;">'+esc(c.n)+'</div>'
+      +'<div style="flex:1;background:var(--border);border-radius:3px;height:7px;overflow:hidden;">'
+      +'<div style="width:'+pct+'%;height:100%;background:var(--sage);border-radius:3px;"></div></div>'
+      +'<div style="font-size:10px;font-weight:600;color:var(--muted);min-width:26px;">'+pct+'%</div></div>';
+  }).join("");
+
+  // Top posts table
+  var topRows=W.topPosts.map(function(p,i){
+    var rank=["🥇","🥈","🥉","4º","5º"][i]||"";
+    var er=(p.reach>0?(p.eng/p.reach*100).toFixed(1):"0")+"%";
+    return'<tr style="border-top:1px solid var(--border);">'
+      +'<td style="padding:5px 3px;font-size:13px;">'+rank+'</td>'
+      +'<td style="padding:5px 3px;">'+pillTipo(p.type)+'</td>'
+      +'<td style="padding:5px 6px;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(p.caption.substring(0,55))+'</td>'
+      +'<td style="padding:5px 3px;font-size:11px;color:var(--muted);">'+esc(p.date)+'</td>'
+      +'<td style="padding:5px 3px;font-size:11px;font-weight:600;color:var(--sage);">'+p.eng+'</td>'
+      +'<td style="padding:5px 3px;font-size:11px;color:var(--brown);">'+er+'</td>'
+      +(p.watchTime?'<td style="padding:5px 3px;font-size:11px;color:var(--purple);">'+p.watchTime+'s</td>':'<td></td>')
+      +'</tr>';
+  }).join("");
+
+  // Analysis sections
+  var perfSection=dA.perfAnalysis
+    ?'<div class="alert-sage"><b>Pontos Fortes</b><br>'+esc(dA.perfAnalysis.fortes)+'</div>'
+      +'<div class="alert-red"><b>A Melhorar</b><br>'+esc(dA.perfAnalysis.melhorar)+'</div>'
+      +'<div class="alert-gold"><b>Próxima Acção Urgente</b><br>'+esc(dA.perfAnalysis.acao)+'</div>'
+    :'<div class="area placeholder">Clica em "Analisar Perfil" para diagnóstico completo baseado nos dados reais.</div>';
+
+  var nichoSection=dA.nichoAnalysis
+    ?'<div class="alert-gold"><b>Tópicos em alta no nicho</b><br>'+esc(dA.nichoAnalysis.topicos)+'</div>'
+      +'<div class="alert-purple"><b>O que está a bombar no Instagram e TikTok</b><br>'+esc(dA.nichoAnalysis.trending)+'</div>'
+      +'<div class="alert-sage"><b>Oportunidades específicas para '+esc(CFG.handle)+'</b><br>'+esc(dA.nichoAnalysis.oportunidades)+'</div>'
+    :'<div class="area placeholder">Clica em "Analisar Nicho" para ver tendências do Instagram e TikTok em 2026.</div>';
+
+  var viraisSection=dA.postsViral
+    ?'<div class="alert-sage"><b>Fórmula dos teus top posts</b><br>'+esc(dA.postsViral.formula)+'</div>'
+      +(dA.postsViral.ideias||[]).map(function(p,i){
+        var titulo=p.titulo||p.title||p.nome||"(sem titulo)";
+        var tipo=p.tipo||p.type||p.formato||"REEL";
+        var hook=p.hook||p.gancho||p.abertura||"";
+        var cta=p.cta||p.keyword||"comentar";
+        var porque=p.porque||p.motivo||p.razao||"";
+        return'<div style="display:flex;gap:8px;align-items:flex-start;padding:9px 10px;background:var(--cream);border-radius:8px;margin-bottom:5px;">'
+          +'<div class="story-num">'+(i+1)+'</div>'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:12px;font-weight:600;color:var(--text);">'+esc(titulo)+'</div>'
+          +'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+esc(tipo)+' · CTA: <b>'+esc(cta)+'</b></div>'
+          +(hook?'<div style="font-size:10px;color:var(--purple);margin-top:2px;font-style:italic;">"'+esc(hook)+'"</div>':'')
+          +(porque?'<div style="font-size:10px;color:var(--sage);margin-top:2px;">'+esc(porque)+'</div>':'')
+          +'</div>'
+          +'<button onclick="addPostFromIdeia('+i+')" style="background:var(--sage);color:#fff;border:none;border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;flex-shrink:0;margin-top:2px;">+ Cal</button>'
+          +'</div>';
+      }).join("")
+      +'<button class="btn btn-dark" onclick="gerarCalComAnalise()">✦ Gerar Calendário com esta análise</button>'
+    :'<div class="area placeholder">Clica em "Posts Virais" para criar 10 ideias baseadas nos teus top posts reais + tendências do nicho.</div>';
+
+  return'<div class="card">'
+    +'<div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:10px;">'
+    +'<div style="width:44px;height:44px;border-radius:50%;background:var(--brown);color:var(--gold);font-family:\'Cormorant Garamond\',serif;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">M</div>'
+    +'<div><div style="font-size:14px;font-weight:700;color:var(--brown);">'+esc(CFG.handle)+'</div>'
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px;">'+esc(CFG.descricao)+'</div>'
+    +(W.daysSince>30?'<div class="alert-red" style="margin-top:6px;font-size:10px;padding:4px 8px;">🚨 '+W.daysSince+' dias sem publicar — urgente</div>':"")
+    +'</div></div>'
+    +'<div class="metrics">'
+    +'<div class="metric"><div class="metric-val">'+W.followers.toLocaleString("pt")+'</div><div class="metric-lbl">Seguidores</div></div>'
+    +'<div class="metric"><div class="metric-val">'+W.reach30+'</div><div class="metric-lbl">Alcance 30d</div></div>'
+    +'<div class="metric"><div class="metric-val">'+W.views30+'</div><div class="metric-lbl">Views 30d</div></div>'
+    +'<div class="metric"><div class="metric-val" style="color:'+(parseFloat(engRate)>1?"var(--sage)":"var(--rosa)")+';">'+engRate+'%</div><div class="metric-lbl">Eng. Rate</div></div>'
+    +'</div>'
+    +sparkline(W.daily)
+    +'</div>'
+
+    // 3 botões de análise
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:4px;">'
+    +'<button class="btn btn-sage" style="margin-top:0;" id="btn-perfil" onclick="analisarPerfil()">◉ Análise Perfil</button>'
+    +'<button class="btn btn-purple" style="margin-top:0;" id="btn-nicho" onclick="analisarNicho()">✦ Análise Nicho</button>'
+    +'<button class="btn btn-dark" style="margin-top:0;" id="btn-viral" onclick="postsVirais()">🔥 Posts Virais</button>'
+    +'</div>'
+
+    // Perfil
+    +'<div class="card" id="sec-perfil">'
+    +'<div class="card-title">◉ Análise de Perfil</div>'
+    +'<div class="card-sub">Dados reais Windsor.ai · '+new Date().toLocaleDateString("pt-PT")+'</div>'
+    +'<div style="overflow-x:auto;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;font-size:11px;">'
+    +'<thead><tr style="text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">'
+    +'<th style="padding:4px;">#</th><th>Tipo</th><th>Legenda</th><th>Data</th><th>Eng.</th><th>Taxa</th><th>Watch</th></tr></thead>'
+    +'<tbody>'+topRows+'</tbody></table></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    +'<div><div style="font-size:10px;font-weight:600;color:var(--brown);margin-bottom:5px;">Género/Idade</div>'+gaBars+'</div>'
+    +'<div><div style="font-size:10px;font-weight:600;color:var(--brown);margin-bottom:5px;">País</div>'+ctBars+'</div></div>'
+    +perfSection
+    +(dA.analisandoPerfil?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><div class="spinner"></div><span style="font-size:11px;color:var(--muted);">A analisar...</span></div>':'')
+    +(dA.perfAnalysis?'':'<button class="btn btn-sage" onclick="analisarPerfil()">◉ Gerar Análise com IA</button>')
+    +'</div>'
+
+    // Nicho
+    +'<div class="card" id="sec-nicho">'
+    +'<div class="card-title">✦ Análise de Nicho</div>'
+    +'<div class="card-sub">Tendências Instagram e TikTok 2026 · Espiritualidade / Bem-estar / Rituais · Portugal e Brasil</div>'
+    +nichoSection
+    +(dA.analisandoNicho?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><div class="spinner"></div><span style="font-size:11px;color:var(--muted);">A pesquisar tendências...</span></div>':'')
+    +(dA.nichoAnalysis?'':'<button class="btn btn-purple" onclick="analisarNicho()">✦ Gerar Análise com IA</button>')
+    +'</div>'
+
+    // Posts Virais
+    +'<div class="card" id="sec-viral">'
+    +'<div class="card-title">🔥 Posts Virais</div>'
+    +'<div class="card-sub">10 ideias baseadas nos teus top posts reais + tendências do nicho</div>'
+    +viraisSection
+    +(dA.analisandoViral?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><div class="spinner"></div><span style="font-size:11px;color:var(--muted);">A criar ideias virais...</span></div>':'')
+    +(dA.postsViral?'':'<button class="btn btn-dark" onclick="postsVirais()">🔥 Gerar Posts Virais com IA</button>')
+    +'</div>';
+}
+
+// ═══ CALENDÁRIO ══════════════════════════════════════════════════════════════
+function calHTML(){
+  var ps=STATE.posts;
+  var rs=0,cs=0,is=0,pub=0;
+  ps.forEach(function(p){
+    if(p.type==="REEL")rs++;else if(p.type==="CARROSSEL")cs++;else is++;
+    if(p.status==="publicado")pub++;
+  });
+
+  // Build post map by day for grid
+  var postsByDay={};
+  ps.forEach(function(p){ if(!postsByDay[p.dia])postsByDay[p.dia]=[]; postsByDay[p.dia].push(p); });
+
+  // Events map
+  var evMap={};
+  (EVENTOS[STATE.mes]||[]).forEach(function(e){ evMap[e.d]=(evMap[e.d]||[]); evMap[e.d].push(e.l); });
+
+  var header='<div class="card">'
+    +'<div class="cal-nav-row">'
+    +'<button class="cal-nav-btn" onclick="chMes(-1)">‹</button>'
+    +'<div style="text-align:center;"><span class="cal-month">'+MESES[STATE.mes]+' '+STATE.ano+'</span>'
+    +'<div style="font-size:10px;color:var(--muted);margin-top:1px;">'+ps.length+' posts · '+pub+' publicados</div></div>'
+    +'<button class="cal-nav-btn" onclick="chMes(1)">›</button>'
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+    +'<div class="pills-row" style="margin:0;">'
+    +'<span class="pill pill-sage">R '+rs+'</span>'
+    +'<span class="pill pill-gold">C '+cs+'</span>'
+    +'<span class="pill pill-rosa">I '+is+'</span>'
+    +'</div>'
+    +'<div class="cal-view-toggle">'
+    +'<button class="cal-view-btn'+(STATE.calView==="grid"?" active":"")+'" data-v="grid" onclick="setCalView(this.dataset.v)">⊞ Grid</button>'    +'<button class="cal-view-btn'+(STATE.calView==="lista"?" active":"")+'" data-v="lista" onclick="setCalView(this.dataset.v)">≡ Lista</button>'    +'</div>'
+    +'</div>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-sage btn-sm" onclick="abrirFormPost(null)">+ Post</button>'
+    +'<button class="btn btn-dark btn-sm" onclick="gerarCalIA()" id="btn-geria">✦ Gerar com IA</button>'
+    +'</div></div>';
+
+  if(STATE.aiLoading){
+    return header+'<div class="card" style="text-align:center;padding:22px;">'+spinner("A gerar calendário para "+MESES[STATE.mes]+"...")+'</div>';
+  }
+
+  if(ps.length===0){
+    return header+'<div class="card" style="text-align:center;padding:24px;">'
+      +'<div style="font-size:28px;margin-bottom:8px;">📅</div>'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:17px;color:var(--brown);margin-bottom:5px;">Sem posts para '+MESES[STATE.mes]+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Cria manualmente ou usa a IA.</div>'
+      +'<button class="btn btn-dark" onclick="gerarCalIA()">✦ Gerar Calendário com IA</button>'
+      +'<button class="btn btn-muted" style="margin-top:6px;" onclick="abrirFormPost(null)">+ Criar Manualmente</button>'
+      +'</div>';
+  }
+
+  var body="";
+
+  if(STATE.calView==="grid"){
+    // Grid view
+    var hoje=new Date(); var hd=hoje.getDate(),hm=hoje.getMonth()+1,ha=hoje.getFullYear();
+    var firstDay=new Date(STATE.ano,STATE.mes-1,1).getDay(); // 0=dom
+    var daysInMonth=new Date(STATE.ano,STATE.mes,0).getDate();
+    var daysInPrev=new Date(STATE.ano,STATE.mes-1,0).getDate();
+    // Start week on Monday
+    var startOffset=(firstDay===0)?6:firstDay-1;
+
+    body+='<div class="card" style="padding:10px;">'
+      +'<table class="cal-grid"><thead><tr>';
+    ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].forEach(function(d){
+      body+='<th>'+d+'</th>';
+    });
+    body+='</tr></thead><tbody>';
+
+    var day=1, nextDay=1, cell=0, totalCells=Math.ceil((startOffset+daysInMonth)/7)*7;
+    body+='<tr>';
+    for(var i=0;i<totalCells;i++){
+      if(i>0&&i%7===0) body+='</tr><tr>';
+      var isCurrentMonth=i>=startOffset&&day<=daysInMonth;
+      var isHoje=isCurrentMonth&&day===hd&&STATE.mes===hm&&STATE.ano===ha;
+      var dayNum=isCurrentMonth?day:(i<startOffset?(daysInPrev-startOffset+i+1):nextDay++);
+      var cls="";
+      if(!isCurrentMonth)cls+=" outro-mes";
+      if(isHoje)cls+=" hoje";
+
+      body+='<td class="'+cls.trim()+'" onclick="'+( isCurrentMonth?'clickGridDay('+day+')':'')+'">'
+        +'<div class="cal-day-num'+(isCurrentMonth&&postsByDay[day]?' tem-post':'')+'">'+dayNum+'</div>';
+
+      if(isCurrentMonth){
+        // Events
+        (evMap[day]||[]).slice(0,1).forEach(function(ev){
+          body+='<div class="cal-ev">'+ev.substring(0,12)+'</div>';
+        });
+        // Posts
+        (postsByDay[day]||[]).forEach(function(p){
+          var tc=p.type==="REEL"?"reel":p.type==="CARROSSEL"?"carrossel":"imagem";
+          var isSel=STATE.sel&&STATE.sel.id===p.id;
+          var hasPr=!!(STATE.prompts[p.id]&&STATE.prompts[p.id].texto);
+          var tc2=p.type==="REEL"?"reel":p.type==="CARROSSEL"?"carrossel":"imagem";
+          var badgeCls="cal-post-badge "+tc2+(p.highlight?" highlight":"")+(p.status==="publicado"?" publicado":"")+(isSel?" selected":"");
+          var badgeTxt=p.type.substring(0,1)+(p.cta?" ·"+p.cta.substring(0,5):"")+(hasPr?" ✓":"");
+          body+="<span class=\""+badgeCls+"\" onclick=\"event.stopPropagation();selPost('"+esc(p.id)+"');\" title=\""+esc(p.title)+(hasPr?" — prompt guardado":"")+"\">"
+            +esc(badgeTxt)+"</span>";
+        });
+        day++;
+      }
+      body+='</td>';
+    }
+    body+='</tr></tbody></table>';
+
+    // Legend
+    body+='<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">'
+      +'<span class="cal-post-badge reel" style="cursor:default;">R Reel</span>'
+      +'<span class="cal-post-badge carrossel" style="cursor:default;">C Carrossel</span>'
+      +'<span class="cal-post-badge imagem" style="cursor:default;">I Imagem</span>'
+      +'<span style="font-size:9px;color:var(--muted);align-self:center;">Borda dupla = destaque · Clica no dia para criar post</span>'
+      +'</div></div>';
+  } else {
+    // Lista view
+    body+='<div class="card">';
+    ps.forEach(function(p){
+      var sel=STATE.sel&&STATE.sel.id===p.id;
+      var temPrompt=!!(STATE.prompts[p.id]&&STATE.prompts[p.id].texto);
+      body+='<div class="post-item'+(sel?" selected":"")+(p.highlight?" highlight-item":"\"")+'\" onclick=\"selPost(\''+esc(p.id)+'\')">'
+        +'<div class="date-box"><div class="date-num">'+pad(p.dia)+'</div><div class="date-dow">'+DOWS[p.dow]+'</div></div>'
+        +'<div class="post-info">'
+        +'<div class="post-title">'+esc(p.title||"(sem título)")+'</div>'
+        +'<div class="post-tags">'+pillTipo(p.type)+' '+pillPhase(p.phase)+' '
+        +(p.highlight?'<span class="pill" style="background:var(--gold);color:var(--brown);border:none;">✦</span> ':'')
+        +(p.spiritual?'<span class="pill pill-gold">🌙</span> ':'')
+        +(temPrompt?'<span class="pill pill-sage">✓ Prompt</span> ':'')
+        +pillStatus(p.status)+'</div></div>'
+        +'<div style="font-size:18px;color:var(--muted);">›</div></div>';
+    });
+    body+='</div>';
+  }
+
+  // Selected post action bar
+  var actionBar="";
+  if(STATE.sel){
+    actionBar='<div class="card" style="border-color:var(--sage);background:var(--sage-l);">'
+      +'<div style="font-size:12px;font-weight:600;color:#2a5a22;margin-bottom:8px;">'
+      +'✓ '+esc(STATE.sel.title.substring(0,48))+(STATE.sel.title.length>48?"...":"")+'</div>'
+      +'<div class="btn-row">'
+      +'<button class="btn btn-primary" style="flex:2" onclick="abrirPost(\''+esc(STATE.sel.id)+'\')">→ Criar Conteúdo</button>'
+      +'<button class="btn btn-muted" style="flex:1" onclick="abrirFormPost(STATE.sel)">✏</button>'
+      +'<button class="btn btn-muted" style="flex:1;border-color:var(--rosa);color:var(--rosa);" onclick="confirmarApagar(\''+esc(STATE.sel.id)+'\')">🗑</button>'
+      +'</div></div>';
+  }
+
+  return header+body+actionBar;
+}
+
+function clickGridDay(dia){
+  // Check if there are posts on this day
+  var postsDia=STATE.posts.filter(function(p){return p.dia===dia;});
+  if(postsDia.length===1){
+    selPost(postsDia[0].id);
+  } else if(postsDia.length>1){
+    // Select first, let user navigate
+    selPost(postsDia[0].id);
+  } else {
+    // No post — open form pre-filled with this day
+    abrirFormPost({dia:dia});
+  }
+}
+
+
+// ═══ POST DETAIL ══════════════════════════════════════════════════════════════
+function postHTML(){
+  if(!STATE.sel)return'<div class="card"><div class="card-sub">Seleciona um post no Calendário.</div><button class="btn btn-muted" onclick="setMod(1)">← Calendário</button></div>';
+  var p=STATE.sel;
+  var phaseCol={reativacao:"var(--sage)",consistencia:"var(--gold)",conversao:"var(--rosa)"}[p.phase]||"var(--muted)";
+  return'<div class="card">'
+    +'<button class="btn btn-muted btn-sm" onclick="setMod(1)" style="margin-bottom:10px;">← Calendário</button>'
+    +'<div class="card-title">'+pad(p.dia)+' '+MESES[STATE.mes]+' · '+esc(p.type)+'</div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:7px;line-height:1.35;">'+esc(p.title)+'</div>'
+    +'<div class="pills-row">'+pillPhase(p.phase)+' '
+    +(p.product?'<span class="pill pill-muted">📦 '+esc(p.product)+'</span> ':'')
+    +(p.cta?'<span class="pill pill-sage">CTA: '+esc(p.cta)+'</span> ':'')
+    +pillStatus(p.status)+'</div>'
+    +(p.highlight&&p.spiritual?'<div class="alert-gold">✦ '+esc(p.spiritual)+'</div>':"")
+    +'<div class="btn-row">'
+    +'<button class="btn btn-muted btn-sm" onclick="abrirFormPost(STATE.sel)">✏ Editar</button>'
+    +'<select class="form-select" style="flex:1;padding:5px 8px;font-size:11px;" onchange="atualizarStatus(STATE.sel.id,this.value);renderBody();">'
+    +'<option value="pending"'+(p.status==="pending"?" selected":"")+'>Pendente</option>'
+    +'<option value="producao"'+(p.status==="producao"?" selected":"")+'>Em Produção</option>'
+    +'<option value="pronto"'+(p.status==="pronto"?" selected":"")+'>Pronto</option>'
+    +'<option value="publicado"'+(p.status==="publicado"?" selected":"")+'>Publicado ✓</option>'
+    +'</select></div></div>'
+    +'<div class="card">'
+    +'<div class="tabs">'
+    +'<div class="tab'+(STATE.tab===0?" active":"")+'" onclick="setTab(0)">✍️ Texto</div>'
+    +'<div class="tab'+(STATE.tab===1?" active":"")+'" onclick="setTab(1)">🖼 Imagem</div>'
+    +'<div class="tab'+(STATE.tab===2?" active":"")+'" onclick="setTab(2)">📱 Stories</div>'
+    +'<div class="tab'+(STATE.tab===3?" active":"")+'" onclick="setTab(3)">✅ Prod.</div>'
+    +'<div class="tab'+(STATE.tab===4?" active":"")+'" onclick="setTab(4)">🎯 Ads</div>'
+    +'</div>'
+    +'<div id="tabc">'+(STATE.tab===0?tabTexto(p):STATE.tab===1?tabImagem(p):STATE.tab===2?tabStories(p):STATE.tab===3?tabProducao(p):tabAds(p))+'</div>'
+    +'</div>';
+}
+
+
+// ═══ HELPERS DE PROMPT ═══════════════════════════════════════════════════════
+
+function buildSistema(){
+  return "Es a assistente de conteudo de "+CFG.handle+", terapeuta holistica. "
+    +"Especialidades: Cosmetologia natural, Fitoterapia ocidental e oriental, "
+    +"Reiki Mestre, HAM/HET Host, Oleos essenciais, Meditacao e Mindfulness, Apometria, Farmacia. "
+    +"Tom: "+CFG.tom+" "
+    +"Nunca linguagem de vendas agressiva. CTA sempre natural e fluido. "
+    +"Formato de Reels: "+CFG.formatoReels+" "
+    +"Responde sempre em Portugues de Portugal. "
+    +"Retorna apenas o que foi pedido, sem introducoes nem explicacoes extra.";
+}
+
+function buildContexto(){
+  var servicos=(CFG.servicos||[]).map(function(s){
+    return s.nome+(s.tipo==="workshop"?" [workshop]":" [servico]");
+  }).join(", ");
+  var pilares=(CFG.pilares||[]).map(function(p){
+    return p.pct+"% "+p.nome;
+  }).join(" | ");
+  var NL="\n";
+  return "=== PERFIL ==="
+    +NL+"Handle: "+CFG.handle
+    +NL+"Titulo: "+CFG.titulo
+    +NL+"Proposta: "+CFG.proposta
+    +NL+"Audiencia: "+CFG.audiencia
+    +NL+"Tom de voz: "+CFG.tom
+    +NL+NL+"=== ESPECIALIDADES TERAPEUTICAS ==="
+    +NL+"Cosmetologia natural, Fitoterapia ocidental e oriental, Reiki Usui (Mestre), Activacoes HAM/HET, Oleos essenciais, Meditacao e Mindfulness, Apometria, Leitura de Aura, Farmacia (PT/BR)"
+    +NL+NL+"=== SERVICOS E WORKSHOPS ==="
+    +NL+servicos
+    +NL+NL+"=== PRODUTOS (segundo plano) ==="
+    +NL+cfgProdutosStr()
+    +NL+NL+"=== ESTRATEGIA DE CONTEUDO ==="
+    +NL+"Pilares: "+pilares
+    +NL+"CTAs Servicos: "+CFG.ctasServicos
+    +NL+"CTAs Educacao: "+CFG.ctasEducacao
+    +NL+"CTAs Comunidade: "+CFG.ctasComunidade
+    +NL+NL+"=== FERRAMENTAS ==="
+    +NL+cfgFerramentasStr()
+    +(CFG.ofertaAtiva?NL+"=== OFERTA ACTIVA ==="+NL+CFG.ofertaAtiva:"")
+    +NL;
+}
+
+function buildBriefing(p){
+  var pilarObj=(CFG.pilares||[]).find(function(pl){
+    return pl.nome.toLowerCase()===(p.pilar||"educacao").toLowerCase();
+  });
+  var pilarDesc=pilarObj?pilarObj.desc:"";
+  var servicoObj=(CFG.servicos||[]).find(function(s){return s.nome===(p.servico||"");});
+  var NL="\n";
+  return "=== BRIEFING DO POST ==="
+    +NL+"Data: "+pad(p.dia)+" de "+MESES[STATE.mes]+" "+STATE.ano+" (publicar as "+CFG.horarioPost+")"
+    +NL+"Formato: "+p.type
+    +NL+"Titulo / Tema: "+p.title
+    +NL+"Pilar de conteudo: "+(p.pilar||"educacao")+(pilarDesc?" -- "+pilarDesc:"")
+    +NL+"Fase do funil: "+({
+      reativacao:"Reativacao -- reconectar com a audiencia, educar, criar confianca",
+      consistencia:"Consistencia -- provar autoridade, mostrar bastidores, construir relacao",
+      conversao:"Conversao -- convidar a agir de forma natural, sem pressao"
+    }[p.phase]||p.phase)
+    +NL+"CTA (palavra-chave nos comentarios): "+p.cta
+    +(p.servico&&servicoObj?NL+"Servico destacado: "+p.servico+" -- "+servicoObj.desc:p.servico?NL+"Servico mencionado: "+p.servico:"")
+    +(p.produto&&p.produto!==""?NL+"Produto (segundo plano): "+p.produto:"")
+    +(p.spiritual?NL+"Data espiritual: "+p.spiritual+" -- integrar simbolismo e significado":"")
+    +NL+NL+"=== PADROES QUE FUNCIONAM ==="
+    +NL+"Top post HAM/HET: 168 interacoes, 13.3s watch time"
+    +NL+"Top post Elixir (storytelling): 137 interacoes, 12.6s watch time"
+    +NL+"Formula: voice-over poetico + imagens natureza/ritual + CTA natural = 45+ comentarios"
+    +NL;
+}
+
+function guardarPromptPost(pid, tipo, conteudo){
+  if(!STATE.prompts[pid]) STATE.prompts[pid]={};
+  var agora=new Date();
+  var ts=agora.toLocaleDateString("pt-PT")+" "+agora.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});
+  var histKey=tipo+"_hist";
+  if(!STATE.prompts[pid][histKey]) STATE.prompts[pid][histKey]=[];
+  if(STATE.prompts[pid][tipo]){
+    STATE.prompts[pid][histKey].unshift({conteudo:STATE.prompts[pid][tipo],data:STATE.prompts[pid][tipo+"_data"]||"anterior"});
+    STATE.prompts[pid][histKey]=STATE.prompts[pid][histKey].slice(0,3);
+  }
+  STATE.prompts[pid][tipo]=conteudo;
+  STATE.prompts[pid][tipo+"_data"]=ts;
+  STATE.prompts[pid].ultimaAtualizacao=ts;
+  savePrompts();
+}
+
+function expPost(btn){
+  exportarPromptPost(btn.getAttribute("data-eid"));
+}
+
+function exportarPromptPost(pid){
+  var p=STATE.posts.find(function(x){return x.id===pid;});
+  if(!p)return;
+  var pr=STATE.prompts[pid]||{};
+  var NL="\n";
+  var md="# Post — "+pad(p.dia)+" de "+MESES[STATE.mes]+" "+STATE.ano+" | "+p.type+NL
+    +"Tema: "+p.title+NL
+    +"Pilar: "+(p.pilar||"—")+" | CTA: "+p.cta+NL
+    +(p.servico?"Servico: "+p.servico+NL:"")
+    +(p.spiritual?"Data especial: "+p.spiritual+NL:"")
+    +"Exportado: "+new Date().toLocaleString("pt-PT")+NL
+    +NL+"---"+NL+NL;
+  if(pr.texto) md+="## Prompt de Texto"+NL+"Gerado: "+(pr.texto_data||"—")+NL+NL+pr.texto+NL+NL;
+  (pr.texto_hist||[]).forEach(function(v){md+="### Texto anterior ("+v.data+")"+NL+v.conteudo+NL+NL;});
+  if(pr.imagem) md+="## Prompt de Imagem/Video"+NL+"Gerado: "+(pr.imagem_data||"—")+NL+NL+pr.imagem+NL+NL;
+  if(pr.stories) md+="## Prompt de Stories"+NL+"Gerado: "+(pr.stories_data||"—")+NL+NL+pr.stories+NL+NL;
+  if(pr.ads) md+="## Prompt de Ads"+NL+pr.ads+NL+NL;
+  md+="---"+NL+"AURA v4 | "+CFG.handle+NL;
+  downloadMd(md,"post_"+pad(p.dia)+"_"+pad(STATE.mes)+"_"+STATE.ano+".md");
+  var btn=event&&event.target;
+  if(btn){var orig=btn.textContent;btn.textContent="Exportado!";setTimeout(function(){btn.textContent=orig;},2000);}
+}
+
+function exportarMes(){
+  var ps=STATE.posts;
+  if(!ps||ps.length===0){alert("Sem posts para exportar neste mes.");return;}
+  var NL="\n";
+  var md="# Calendario — "+MESES[STATE.mes]+" "+STATE.ano+" | "+CFG.handle+NL
+    +"Exportado: "+new Date().toLocaleString("pt-PT")+NL
+    +"Total: "+ps.length+" posts"+NL+NL+"---"+NL+NL;
+  ps.sort(function(a,b){return a.dia-b.dia;}).forEach(function(p){
+    var pr=STATE.prompts[p.id]||{};
+    md+="## "+pad(p.dia)+" | "+p.type+" | "+p.title+NL
+      +"Pilar: "+(p.pilar||"—")+" | CTA: "+p.cta+" | Status: "+p.status+NL
+      +(p.spiritual?"Data especial: "+p.spiritual+NL:"")+NL;
+    if(pr.texto) md+="### Prompt Texto ("+pr.texto_data+")"+NL+pr.texto+NL+NL;
+    if(pr.imagem) md+="### Prompt Imagem ("+pr.imagem_data+")"+NL+pr.imagem+NL+NL;
+    if(pr.stories) md+="### Prompt Stories ("+pr.stories_data+")"+NL+pr.stories+NL+NL;
+    if(!pr.texto&&!pr.imagem&&!pr.stories) md+="*Sem prompts gerados ainda.*"+NL+NL;
+    md+="---"+NL+NL;
+  });
+  md+="AURA v4 | "+CFG.handle+NL;
+  downloadMd(md,"calendario_"+MESES[STATE.mes].toLowerCase()+"_"+STATE.ano+".md");
+  var btn=event&&event.target;
+  if(btn){var orig=btn.textContent;btn.textContent="Exportado!";setTimeout(function(){btn.textContent=orig;},2000);}
+}
+
+// ═══ TAB TEXTO ═══════════════════════════════════════════════════════════════
+function tabTexto(p){
+  var pr=STATE.prompts[p.id]||{};
+  var hist=pr.texto_hist||[];
+  var h='<div class="card-sub">Prompt gerado pelo Claude. Copia e usa numa nova conversa.</div>';
+  if(pr.texto){
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+      +'<div style="font-size:11px;font-weight:600;color:var(--brown);">Prompt de Texto</div>'
+      +'<div style="display:flex;gap:5px;align-items:center;">'
+      +(pr.texto_data?'<span class="prompt-saved">&#10003; '+esc(pr.texto_data)+'</span>':'')
+      +'<button class="btn btn-muted btn-sm" data-eid="'+esc(p.id)+'" onclick="expPost(this)">&#8595; .md</button>'
+      +'</div></div>'
+      +'<div class="prompt-box"><div class="prompt-txt" id="tx-p">'+esc(pr.texto)+'</div>'
+      +'<button class="copy-btn" onclick="cpText(this.previousElementSibling.id)">copiar</button></div>';
+    if(hist.length){
+      h+='<details style="margin-top:6px;"><summary style="font-size:10px;color:var(--muted);cursor:pointer;">'+hist.length+' versao(es) anterior(es)</summary>';
+      hist.forEach(function(v,i){
+        h+='<div style="margin-top:6px;opacity:.8;">'
+          +'<div style="font-size:10px;color:var(--muted);">'+esc(v.data)+'</div>'
+          +'<div class="prompt-box"><div class="prompt-txt" id="txh'+i+'">'+esc(v.conteudo)+'</div>'
+          +'<button class="copy-btn" onclick="cpText(this.previousElementSibling.id)">copiar</button></div>'
+          +'</div>';
+      });
+      h+='</details>';
+    }
+    h+='<div class="btn-row" style="margin-top:8px;">'
+      +'<button class="btn btn-muted" style="flex:1" onclick="gerarPromptTexto()">Re-gerar (guarda versao)</button>'
+      +'<button class="btn btn-sage" style="flex:1" data-eid="'+esc(p.id)+'" onclick="expPost(this)">&#8595; Exportar .md</button>'
+      +'</div>';
+  } else {
+    h+='<div class="alert-gold">O Claude analisa o briefing e gera um prompt profissional especifico para terapeuta holistica. Fica guardado com data e hora.</div>'
+      +'<div class="area" style="font-size:11px;color:var(--muted);">Briefing:\n'+esc(buildBriefing(p))+'</div>'
+      +'<button class="btn btn-primary" onclick="gerarPromptTexto()">Gerar Prompt com IA</button>';
+  }
+  return h;
+}
+
+function tabImagem(p){
+  var pr=STATE.prompts[p.id]||{};
+  var h='<div class="card-sub">Prompt de imagem e video gerado pelo Claude para Gemini Plus.</div>';
+  if(pr.imagem){
+    var savedBadge=pr.imagem_data?'<span class="prompt-saved">&#10003; '+esc(pr.imagem_data)+'</span>':'';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+      +'<div style="font-size:11px;font-weight:600;color:var(--brown);">Prompt de Imagem / Video</div>'
+      +savedBadge+'</div>'
+      +'<div class="prompt-box"><div class="prompt-txt" id="p-img">'+esc(pr.imagem)+'</div>'
+      +'<button class="copy-btn" onclick="cpText(this.previousElementSibling.id)">copiar</button></div>'
+      +'<div class="alert-sage" style="margin-top:8px;">Ferramenta: Gemini Plus | Imagen 3 para foto | Geracao de video para Reels</div>'
+      +'<a href="https://gemini.google.com" target="_blank" style="display:block;margin-top:6px;font-size:12px;color:var(--rosa);font-weight:600;">Abrir Gemini</a>'
+      +'<div class="btn-row" style="margin-top:8px;">'
+      +'<button class="btn btn-muted" style="flex:1" onclick="gerarPromptImagem()">Re-gerar</button>'
+      +'<button class="btn btn-sage" style="flex:1" data-eid="'+esc(p.id)+'" onclick="expPost(this)">&#8595; Exportar .md</button>'
+      +'</div>';
+  } else {
+    h+='<div class="alert-gold">O Claude gera um prompt de imagem calibrado para Gemini Plus — simples e executavel.</div>'
+      +'<button class="btn btn-dark" onclick="gerarPromptImagem()">Gerar Prompt de Imagem com IA</button>';
+  }
+  return h;
+}
+
+function tabStories(p){
+  var pr=STATE.prompts[p.id]||{};
+  var h='<div class="card-sub">Sequencia de 7 Stories estrategicos. Gerados pelo Claude com contexto real.</div>';
+  if(pr.stories){
+    var savedBadge=pr.stories_data?'<span class="prompt-saved">&#10003; '+esc(pr.stories_data)+'</span>':'';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+      +'<div style="font-size:11px;font-weight:600;color:var(--brown);">Prompt de Stories</div>'
+      +savedBadge+'</div>'
+      +'<div class="alert-purple" style="margin-bottom:6px;">80% conexao | 15% educacao | 5% oferta</div>'
+      +'<div class="prompt-box"><div class="prompt-txt" id="p-st">'+esc(pr.stories)+'</div>'
+      +'<button class="copy-btn" onclick="cpText(this.previousElementSibling.id)">copiar</button></div>'
+      +'<div class="btn-row" style="margin-top:8px;">'
+      +'<button class="btn btn-muted" style="flex:1" onclick="gerarPromptStories()">Re-gerar</button>'
+      +'<button class="btn btn-sage" style="flex:1" data-eid="'+esc(p.id)+'" onclick="expPost(this)">&#8595; Exportar .md</button>'
+      +'</div>';
+  } else {
+    h+='<div class="alert-purple">80% conexao | 15% educacao | 5% oferta</div>'
+      +'<button class="btn btn-purple" onclick="gerarPromptStories()">Gerar Prompt de Stories com IA</button>';
+  }
+  return h;
+}
+
+function gerarPromptTexto(){
+  var p=STATE.sel; if(!p)return;
+  var el=document.getElementById("tabc");
+  if(el) el.innerHTML='<div style="padding:20px 0;">'+spinner("Claude a construir prompt de texto para terapeuta holistica...")+'</div>';
+  var tipoInstr={
+    "REEL":"Reel vertical 9:16, 45-60s. "+CFG.formatoReels+" HOOK (1 frase de impacto nos primeiros 3s como texto no ecra) + VOZ-OFF completo (narrativa poetica, intima, linguagem de terapeuta com autoridade) + CTA final (texto no ecra). Imagens de: "+CFG.ambientes,
+    "CARROSSEL":"Carrossel Instagram 7 slides. Slide 1 = capa com hook forte. Slides 2-6 = conteudo educativo (frases curtas, max 3 linhas, linguagem de terapeuta especialista). Slide 7 = CTA.",
+    "IMAGEM":"Imagem estatica. Texto sobreposto (1-2 linhas impactantes) + descricao visual/mood + legenda completa."
+  }[p.type]||"Post Instagram";
+
+  var prompt="Com base no contexto e briefing, cria um prompt profissional e completo que uma criadora de conteudo pode usar com qualquer IA para gerar conteudo de qualidade.\n\n"
+    +buildContexto()+"\n"
+    +buildBriefing(p)+"\n"
+    +"=== FORMATO ===\n"+tipoInstr+"\n\n"
+    +"Cria um prompt em Portugues de Portugal que inclua:\n"
+    +"1. Role: assistente de conteudo de terapeuta holistica (Cosmetologia natural, Fitoterapia, Reiki, HAM/HET, Oleos essenciais, Meditacao, Apometria)\n"
+    +"2. Contexto completo do perfil e audiencia\n"
+    +"3. Instrucoes especificas para o formato "+p.type+"\n"
+    +"4. Tom: "+CFG.tom+"\n"
+    +"5. O que entregar: guiao completo, legenda Instagram, 20 hashtags relevantes\n"
+    +"6. Regra do CTA '"+p.cta+"': deve parecer natural, nunca forcado\n"
+    +(p.spiritual?"7. Como integrar a data especial '"+p.spiritual+"' no conteudo\n":"")
+    +"\nO prompt deve estar pronto a usar — quando colado numa nova conversa, gera conteudo excelente sem explicacoes adicionais.";
+
+  claude(prompt, function(err,raw){
+    if(!STATE.prompts[p.id]) STATE.prompts[p.id]={};
+    if(err||!raw){
+      var e2=document.getElementById("tabc");
+      if(e2) e2.innerHTML='<div class="alert-red">Erro ao gerar. Tenta novamente.</div>'
+        +'<button class="btn btn-primary" onclick="gerarPromptTexto()">Tentar novamente</button>';
+      return;
+    }
+    var clean=raw.replace(/^```[\w]*\n?/,"").replace(/```$/,"").trim();
+    guardarPromptPost(p.id,"texto",clean);
+    STATE.tab=0; renderBody();
+  }, buildSistema(), 1500);
+}
+
+// ═══ TAB IMAGEM ══════════════════════════════════════════════════════════════
+
+function gerarPromptImagem(){
+  var p=STATE.sel; if(!p)return;
+  var el=document.getElementById("tabc");
+  if(el) el.innerHTML='<div style="padding:20px 0;">'+spinner("Claude a construir prompt de imagem/video...")+'</div>';
+  var elem=p.spiritual?p.spiritual.replace(/[^a-zA-ZÀ-ɏ\s]/g,"").trim():"natureza, plantas e ervas medicinais";
+  var prompt="Com base no contexto, cria prompts de imagem e video para Gemini Plus.\n\n"
+    +buildContexto()+"\n"
+    +buildBriefing(p)+"\n"
+    +"=== REGRAS PARA OS PROMPTS ===\n"
+    +"Ferramenta: Gemini Plus (Imagen 3 para fotos, geracao de video para Reels)\n"
+    +"Protagonista: "+CFG.nome+" — terapeuta holistica — em ambiente de terapia, natureza ou ritual\n"
+    +"Ambientes: "+CFG.ambientes+"\n"
+    +"Paleta: bege quente, verde sage, luz natural de janela\n"
+    +"Formato: vertical 4:5 para feed, 9:16 para Reels\n"
+    +(p.spiritual?"Elemento visual do dia especial: "+elem+"\n":"")
+    +(p.produto&&p.produto!==""?"Produto pode aparecer como elemento secundario: "+p.produto+"\n":"")
+    +"IMPORTANTE: prompts simples e executaveis. Nao pedir render extremo. Sem jargao tecnico.\n\n"
+    +"Entrega em Portugues de Portugal:\n"
+    +"## Foto (Imagen 3) — descricao visual da cena, pessoa/elementos, luz, mood\n"
+    +"## Video para Reels — 1 acao simples de 5-8 segundos, camera estatica\n"
+    +"## Canva — instrucao de design (texto sobreposto, formato, tipografia)\n"
+    +"## CapCut — instrucao de montagem do Reel (voice-over, legendas, musica)";
+
+  claude(prompt, function(err,raw){
+    if(!STATE.prompts[p.id]) STATE.prompts[p.id]={};
+    if(err||!raw){
+      var e2=document.getElementById("tabc");
+      if(e2) e2.innerHTML='<div class="alert-red">Erro ao gerar.</div>'
+        +'<button class="btn btn-dark" onclick="gerarPromptImagem()">Tentar novamente</button>';
+      return;
+    }
+    var clean=raw.replace(/^```[\w]*\n?/,"").replace(/```$/,"").trim();
+    guardarPromptPost(p.id,"imagem",clean);
+    STATE.tab=1; renderBody();
+  }, buildSistema(), 1500);
+}
+
+// ═══ TAB STORIES ═════════════════════════════════════════════════════════════
+
+function gerarPromptStories(){
+  var p=STATE.sel; if(!p)return;
+  var el=document.getElementById("tabc");
+  if(el) el.innerHTML='<div style="padding:20px 0;">'+spinner("Claude a construir prompt de stories...")+'</div>';
+  var prompt="Com base no contexto e briefing, cria um prompt COMPLETO para uma sequencia de 7 Stories de Instagram para uma terapeuta holistica.\n\n"
+    +buildContexto()+"\n"
+    +buildBriefing(p)+"\n"
+    +"=== REGRAS DOS STORIES ===\n"
+    +"Proporcao: 80% conexao, 15% educacao, 5% oferta\n"
+    +"Os Stories parecem humanos, leves e espontaneos — NAO guiao de vendas\n"
+    +"A venda acontece de forma natural, nunca forcar\n"
+    +"Cada story: fala/texto + sugestao visual + intencao estrategica\n\n"
+    +"Cria um prompt em Portugues de Portugal que gere esta sequencia especifica:\n"
+    +"Story 1 — Rotina/bastidores (conexao real, mostrar o dia de terapeuta)\n"
+    +"Story 2 — Pensamento ou ensinamento breve da especialidade\n"
+    +"Story 3 — Enquete ou caixa de perguntas sobre o tema\n"
+    +"Story 4 — Bastidores do post do dia ou servico em accao\n"
+    +"Story 5 — Mini-ensinamento pratico (1 dica das especialidades)\n"
+    +"Story 6 — Momento humano e espontaneo da terapeuta\n"
+    +"Story 7 — CTA suave (nunca venda directa)\n\n"
+    +"Ganchos eficazes para usar: 'Ja passaste por isto?', 'Ninguem te conta, mas...', 'O que mudou tudo foi...'\n"
+    +"CTAs leves para Story 7: 'Manda-me uma mensagem', 'Explico-te no direct', 'Link na bio'\n\n"
+    +"O prompt deve incluir: contexto do perfil de terapeuta holistica, estrutura dos 7 stories, "
+    +"exemplos de texto para cada um, sugestoes visuais e intencao estrategica de cada story.";
+
+  claude(prompt, function(err,raw){
+    if(!STATE.prompts[p.id]) STATE.prompts[p.id]={};
+    if(err||!raw){
+      var e2=document.getElementById("tabc");
+      if(e2) e2.innerHTML='<div class="alert-red">Erro ao gerar.</div>'
+        +'<button class="btn btn-purple" onclick="gerarPromptStories()">Tentar novamente</button>';
+      return;
+    }
+    var clean=raw.replace(/^```[\w]*\n?/,"").replace(/```$/,"").trim();
+    guardarPromptPost(p.id,"stories",clean);
+    STATE.tab=2; renderBody();
+  }, buildSistema(), 1200);
+}
+
+
+function renderBody(){
+  var el=document.getElementById("body");if(!el)return;
+  carregarPosts();
+  if(STATE.mod===0)el.innerHTML=dashHTML();
+  else if(STATE.mod===1)el.innerHTML=calHTML();
+  else if(STATE.mod===2)el.innerHTML=postHTML();
+  else if(STATE.mod===3)el.innerHTML=storiesHTML();
+  else if(STATE.mod===4)el.innerHTML=adsHTML();
+  else if(STATE.mod===5)el.innerHTML=configHTML();
+  else if(STATE.mod===6)el.innerHTML=projectHTML();
+}
+
+
+function dashHTML(){
+  var dA=STATE.dash||{};
+  var W=WINDSOR;
+  var engRate=(W.followers>0?((W.eng30/30)/W.followers*100).toFixed(2):"0.00");
+
+  function sparkline(data){
+    if(!data||!data.length)return"";
+    var vals=data.map(function(d){return d.v||0;});
+    var mx=Math.max.apply(null,vals)||1,w=160,h=32;
+    var pts=vals.map(function(v,i){return(i/(vals.length-1)*w).toFixed(1)+","+(h-v/mx*(h-4)).toFixed(1);}).join(" ");
+    return'<svg width="'+w+'" height="'+h+'" style="display:block;"><polyline points="'+pts+'" fill="none" stroke="var(--sage)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+
+  // Audience bars
+  var gaTotal=W.genderAge.reduce(function(s,g){return s+g.v;},0)||1;
+  var gaBars=W.genderAge.slice(0,5).map(function(g){
+    var pct=Math.round(g.v/gaTotal*100);
+    var col=g.n.startsWith("F.")?"var(--rosa)":g.n.startsWith("M.")?"var(--blue)":"var(--muted)";
+    return'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
+      +'<div style="font-size:10px;color:var(--text);min-width:52px;">'+esc(g.n)+'</div>'
+      +'<div style="flex:1;background:var(--border);border-radius:3px;height:7px;overflow:hidden;">'
+      +'<div style="width:'+pct+'%;height:100%;background:'+col+';border-radius:3px;"></div></div>'
+      +'<div style="font-size:10px;font-weight:600;color:var(--muted);min-width:26px;">'+pct+'%</div></div>';
+  }).join("");
+
+  var ctTotal=W.countries.reduce(function(s,c){return s+c.v;},0)||1;
+  var ctBars=W.countries.slice(0,4).map(function(c){
+    var pct=Math.round(c.v/ctTotal*100);
+    return'<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">'
+      +'<div style="font-size:10px;color:var(--text);min-width:52px;">'+esc(c.n)+'</div>'
+      +'<div style="flex:1;background:var(--border);border-radius:3px;height:7px;overflow:hidden;">'
+      +'<div style="width:'+pct+'%;height:100%;background:var(--sage);border-radius:3px;"></div></div>'
+      +'<div style="font-size:10px;font-weight:600;color:var(--muted);min-width:26px;">'+pct+'%</div></div>';
+  }).join("");
+
+  // Top posts table
+  var topRows=W.topPosts.map(function(p,i){
+    var rank=["🥇","🥈","🥉","4º","5º"][i]||"";
+    var er=(p.reach>0?(p.eng/p.reach*100).toFixed(1):"0")+"%";
+    return'<tr style="border-top:1px solid var(--border);">'
+      +'<td style="padding:5px 3px;font-size:13px;">'+rank+'</td>'
+      +'<td style="padding:5px 3px;">'+pillTipo(p.type)+'</td>'
+      +'<td style="padding:5px 6px;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(p.caption.substring(0,55))+'</td>'
+      +'<td style="padding:5px 3px;font-size:11px;color:var(--muted);">'+esc(p.date)+'</td>'
+      +'<td style="padding:5px 3px;font-size:11px;font-weight:600;color:var(--sage);">'+p.eng+'</td>'
+      +'<td style="padding:5px 3px;font-size:11px;color:var(--brown);">'+er+'</td>'
+      +(p.watchTime?'<td style="padding:5px 3px;font-size:11px;color:var(--purple);">'+p.watchTime+'s</td>':'<td></td>')
+      +'</tr>';
+  }).join("");
+
+  // Analysis sections
+  var perfSection=dA.perfAnalysis
+    ?'<div class="alert-sage"><b>Pontos Fortes</b><br>'+esc(dA.perfAnalysis.fortes)+'</div>'
+      +'<div class="alert-red"><b>A Melhorar</b><br>'+esc(dA.perfAnalysis.melhorar)+'</div>'
+      +'<div class="alert-gold"><b>Próxima Acção Urgente</b><br>'+esc(dA.perfAnalysis.acao)+'</div>'
+    :'<div class="area placeholder">Clica em "Analisar Perfil" para diagnóstico completo baseado nos dados reais.</div>';
+
+  var nichoSection=dA.nichoAnalysis
+    ?'<div class="alert-gold"><b>Tópicos em alta no nicho</b><br>'+esc(dA.nichoAnalysis.topicos)+'</div>'
+      +'<div class="alert-purple"><b>O que está a bombar no Instagram e TikTok</b><br>'+esc(dA.nichoAnalysis.trending)+'</div>'
+      +'<div class="alert-sage"><b>Oportunidades específicas para '+esc(CFG.handle)+'</b><br>'+esc(dA.nichoAnalysis.oportunidades)+'</div>'
+    :'<div class="area placeholder">Clica em "Analisar Nicho" para ver tendências do Instagram e TikTok em 2026.</div>';
+
+  var viraisSection=dA.postsViral
+    ?'<div class="alert-sage"><b>Fórmula dos teus top posts</b><br>'+esc(dA.postsViral.formula)+'</div>'
+      +(dA.postsViral.ideias||[]).map(function(p,i){
+        var titulo=p.titulo||p.title||p.nome||"(sem titulo)";
+        var tipo=p.tipo||p.type||p.formato||"REEL";
+        var hook=p.hook||p.gancho||p.abertura||"";
+        var cta=p.cta||p.keyword||"comentar";
+        var porque=p.porque||p.motivo||p.razao||"";
+        return'<div style="display:flex;gap:8px;align-items:flex-start;padding:9px 10px;background:var(--cream);border-radius:8px;margin-bottom:5px;">'
+          +'<div class="story-num">'+(i+1)+'</div>'
+          +'<div style="flex:1;">'
+          +'<div style="font-size:12px;font-weight:600;color:var(--text);">'+esc(titulo)+'</div>'
+          +'<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+esc(tipo)+' · CTA: <b>'+esc(cta)+'</b></div>'
+          +(hook?'<div style="font-size:10px;color:var(--purple);margin-top:2px;font-style:italic;">"'+esc(hook)+'"</div>':'')
+          +(porque?'<div style="font-size:10px;color:var(--sage);margin-top:2px;">'+esc(porque)+'</div>':'')
+          +'</div>'
+          +'<button onclick="addPostFromIdeia('+i+')" style="background:var(--sage);color:#fff;border:none;border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;flex-shrink:0;margin-top:2px;">+ Cal</button>'
+          +'</div>';
+      }).join("")
+      +'<button class="btn btn-dark" onclick="gerarCalComAnalise()">✦ Gerar Calendário com esta análise</button>'
+    :'<div class="area placeholder">Clica em "Posts Virais" para criar 10 ideias baseadas nos teus top posts reais + tendências do nicho.</div>';
+
+  return'<div class="card">'
+    +'<div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:10px;">'
+    +'<div style="width:44px;height:44px;border-radius:50%;background:var(--brown);color:var(--gold);font-family:\'Cormorant Garamond\',serif;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">M</div>'
+    +'<div><div style="font-size:14px;font-weight:700;color:var(--brown);">'+esc(CFG.handle)+'</div>'
+    +'<div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px;">'+esc(CFG.descricao)+'</div>'
+    +(W.daysSince>30?'<div class="alert-red" style="margin-top:6px;font-size:10px;padding:4px 8px;">🚨 '+W.daysSince+' dias sem publicar — urgente</div>':"")
+    +'</div></div>'
+    +'<div class="metrics">'
+    +'<div class="metric"><div class="metric-val">'+W.followers.toLocaleString("pt")+'</div><div class="metric-lbl">Seguidores</div></div>'
+    +'<div class="metric"><div class="metric-val">'+W.reach30+'</div><div class="metric-lbl">Alcance 30d</div></div>'
+    +'<div class="metric"><div class="metric-val">'+W.views30+'</div><div class="metric-lbl">Views 30d</div></div>'
+    +'<div class="metric"><div class="metric-val" style="color:'+(parseFloat(engRate)>1?"var(--sage)":"var(--rosa)")+';">'+engRate+'%</div><div class="metric-lbl">Eng. Rate</div></div>'
+    +'</div>'
+    +sparkline(W.daily)
+    +'</div>'
+
+    // 3 botões de análise
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:4px;">'
+    +'<button class="btn btn-sage" style="margin-top:0;" id="btn-perfil" onclick="analisarPerfil()">◉ Análise Perfil</button>'
+    +'<button class="btn btn-purple" style="margin-top:0;" id="btn-nicho" onclick="analisarNicho()">✦ Análise Nicho</button>'
+    +'<button class="btn btn-dark" style="margin-top:0;" id="btn-viral" onclick="postsVirais()">🔥 Posts Virais</button>'
+    +'</div>'
+
+    // Perfil
+    +'<div class="card" id="sec-perfil">'
+    +'<div class="card-title">◉ Análise de Perfil</div>'
+    +'<div class="card-sub">Dados reais Windsor.ai · '+new Date().toLocaleDateString("pt-PT")+'</div>'
+    +'<div style="overflow-x:auto;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;font-size:11px;">'
+    +'<thead><tr style="text-align:left;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">'
+    +'<th style="padding:4px;">#</th><th>Tipo</th><th>Legenda</th><th>Data</th><th>Eng.</th><th>Taxa</th><th>Watch</th></tr></thead>'
+    +'<tbody>'+topRows+'</tbody></table></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    +'<div><div style="font-size:10px;font-weight:600;color:var(--brown);margin-bottom:5px;">Género/Idade</div>'+gaBars+'</div>'
+    +'<div><div style="font-size:10px;font-weight:600;color:var(--brown);margin-bottom:5px;">País</div>'+ctBars+'</div></div>'
+    +perfSection
+    +(dA.analisandoPerfil?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><div class="spinner"></div><span style="font-size:11px;color:var(--muted);">A analisar...</span></div>':'')
+    +(dA.perfAnalysis?'':'<button class="btn btn-sage" onclick="analisarPerfil()">◉ Gerar Análise com IA</button>')
+    +'</div>'
+
+    // Nicho
+    +'<div class="card" id="sec-nicho">'
+    +'<div class="card-title">✦ Análise de Nicho</div>'
+    +'<div class="card-sub">Tendências Instagram e TikTok 2026 · Espiritualidade / Bem-estar / Rituais · Portugal e Brasil</div>'
+    +nichoSection
+    +(dA.analisandoNicho?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><div class="spinner"></div><span style="font-size:11px;color:var(--muted);">A pesquisar tendências...</span></div>':'')
+    +(dA.nichoAnalysis?'':'<button class="btn btn-purple" onclick="analisarNicho()">✦ Gerar Análise com IA</button>')
+    +'</div>'
+
+    // Posts Virais
+    +'<div class="card" id="sec-viral">'
+    +'<div class="card-title">🔥 Posts Virais</div>'
+    +'<div class="card-sub">10 ideias baseadas nos teus top posts reais + tendências do nicho</div>'
+    +viraisSection
+    +(dA.analisandoViral?'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;"><div class="spinner"></div><span style="font-size:11px;color:var(--muted);">A criar ideias virais...</span></div>':'')
+    +(dA.postsViral?'':'<button class="btn btn-dark" onclick="postsVirais()">🔥 Gerar Posts Virais com IA</button>')
+    +'</div>';
+}
+
+// ═══ CALENDÁRIO ══════════════════════════════════════════════════════════════
+function calHTML(){
+  var ps=STATE.posts;
+  var rs=0,cs=0,is=0,pub=0;
+  ps.forEach(function(p){if(p.type==="REEL")rs++;else if(p.type==="CARROSSEL")cs++;else is++;if(p.status==="publicado")pub++;});
+  var h='<div class="card"><div class="cal-nav-row">'
+    +'<button class="cal-nav-btn" onclick="chMes(-1)">‹</button>'
+    +'<div style="text-align:center;"><span class="cal-month">'+MESES[STATE.mes]+' '+STATE.ano+'</span>'
+    +'<div style="font-size:10px;color:var(--muted);margin-top:1px;">'+ps.length+' posts · '+pub+' publicados</div></div>'
+    +'<button class="cal-nav-btn" onclick="chMes(1)">›</button></div>'
+    +'<div class="pills-row"><span class="pill pill-sage">Reels '+rs+'</span><span class="pill pill-gold">Carrosseis '+cs+'</span><span class="pill pill-rosa">Imagens '+is+'</span></div>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-sage btn-sm" onclick="abrirFormPost(null)">+ Novo Post</button>'
+    +'<button class="btn btn-dark btn-sm" onclick="gerarCalIA()" id="btn-geria">✦ Gerar com IA</button>'
+    +'</div></div>';
+  if(STATE.aiLoading){h+='<div class="card" style="text-align:center;padding:22px;">'+spinner("A gerar calendário para "+MESES[STATE.mes]+"...")+'</div>';return h;}
+  if(ps.length===0){
+    h+='<div class="card" style="text-align:center;padding:24px;">'
+      +'<div style="font-size:28px;margin-bottom:8px;">📅</div>'
+      +'<div style="font-family:\'Cormorant Garamond\',serif;font-size:17px;color:var(--brown);margin-bottom:5px;">Sem posts para '+MESES[STATE.mes]+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Cria manualmente ou usa a IA.</div>'
+      +'<button class="btn btn-dark" onclick="gerarCalIA()">✦ Gerar Calendário com IA</button>'
+      +'<button class="btn btn-muted" style="margin-top:6px;" onclick="abrirFormPost(null)">+ Criar Manualmente</button>'
+      +'</div>';
+    return h;
+  }
+  h+='<div class="card">';
+  ps.forEach(function(p){
+    var sel=STATE.sel&&STATE.sel.id===p.id;
+    h+='<div class="post-item'+(sel?" selected":"")+(p.highlight?" highlight-item":"")+'" onclick="selPost(\''+esc(p.id)+'\')">'
+      +'<div class="date-box"><div class="date-num">'+pad(p.dia)+'</div><div class="date-dow">'+DOWS[p.dow]+'</div></div>'
+      +'<div class="post-info"><div class="post-title">'+esc(p.title||"(sem título)")+'</div>'
+      +'<div class="post-tags">'+pillTipo(p.type)+' '+pillPhase(p.phase)+' '
+      +(p.highlight?'<span class="pill pill-special" style="background:var(--gold);color:var(--brown);">✦</span> ':'')
+      +(p.spiritual?'<span class="pill pill-gold">🌙</span> ':'')
+      +pillStatus(p.status)+'</div></div>'
+      +'<div style="font-size:18px;color:var(--muted);">›</div></div>';
+  });
+  h+='</div>';
+  if(STATE.sel){
+    h+='<div class="card" style="border-color:var(--sage);background:var(--sage-l);">'
+      +'<div style="font-size:12px;font-weight:600;color:#2a5a22;margin-bottom:8px;">✓ '+esc(STATE.sel.title.substring(0,50))+(STATE.sel.title.length>50?"...":"")+'</div>'
+      +'<div class="btn-row">'
+      +'<button class="btn btn-primary" style="flex:2" onclick="abrirPost(\''+esc(STATE.sel.id)+'\')">→ Criar Conteúdo</button>'
+      +'<button class="btn btn-muted" style="flex:1" onclick="abrirFormPost(STATE.sel)">✏</button>'
+      +'<button class="btn btn-muted" style="flex:1;border-color:var(--rosa);color:var(--rosa);" onclick="confirmarApagar(\''+esc(STATE.sel.id)+'\')">🗑</button>'
+      +'</div></div>';
+  }
+  return h;
+}
+
+// ═══ POST DETAIL ══════════════════════════════════════════════════════════════
+function postHTML(){
+  if(!STATE.sel)return'<div class="card"><div class="card-sub">Seleciona um post no Calendário.</div><button class="btn btn-muted" onclick="setMod(1)">← Calendário</button></div>';
+  var p=STATE.sel;
+  var phaseCol={reativacao:"var(--sage)",consistencia:"var(--gold)",conversao:"var(--rosa)"}[p.phase]||"var(--muted)";
+  return'<div class="card">'
+    +'<button class="btn btn-muted btn-sm" onclick="setMod(1)" style="margin-bottom:10px;">← Calendário</button>'
+    +'<div class="card-title">'+pad(p.dia)+' '+MESES[STATE.mes]+' · '+esc(p.type)+'</div>'
+    +'<div style="font-size:13px;color:var(--muted);margin-bottom:7px;line-height:1.35;">'+esc(p.title)+'</div>'
+    +'<div class="pills-row">'+pillPhase(p.phase)+' '
+    +(p.product?'<span class="pill pill-muted">📦 '+esc(p.product)+'</span> ':'')
+    +(p.cta?'<span class="pill pill-sage">CTA: '+esc(p.cta)+'</span> ':'')
+    +pillStatus(p.status)+'</div>'
+    +(p.highlight&&p.spiritual?'<div class="alert-gold">✦ '+esc(p.spiritual)+'</div>':"")
+    +'<div class="btn-row">'
+    +'<button class="btn btn-muted btn-sm" onclick="abrirFormPost(STATE.sel)">✏ Editar</button>'
+    +'<select class="form-select" style="flex:1;padding:5px 8px;font-size:11px;" onchange="atualizarStatus(STATE.sel.id,this.value);renderBody();">'
+    +'<option value="pending"'+(p.status==="pending"?" selected":"")+'>Pendente</option>'
+    +'<option value="producao"'+(p.status==="producao"?" selected":"")+'>Em Produção</option>'
+    +'<option value="pronto"'+(p.status==="pronto"?" selected":"")+'>Pronto</option>'
+    +'<option value="publicado"'+(p.status==="publicado"?" selected":"")+'>Publicado ✓</option>'
+    +'</select></div></div>'
+    +'<div class="card">'
+    +'<div class="tabs">'
+    +'<div class="tab'+(STATE.tab===0?" active":"")+'" onclick="setTab(0)">✍️ Texto</div>'
+    +'<div class="tab'+(STATE.tab===1?" active":"")+'" onclick="setTab(1)">🖼 Imagem</div>'
+    +'<div class="tab'+(STATE.tab===2?" active":"")+'" onclick="setTab(2)">📱 Stories</div>'
+    +'<div class="tab'+(STATE.tab===3?" active":"")+'" onclick="setTab(3)">✅ Prod.</div>'
+    +'<div class="tab'+(STATE.tab===4?" active":"")+'" onclick="setTab(4)">🎯 Ads</div>'
+    +'</div>'
+    +'<div id="tabc">'+(STATE.tab===0?tabTexto(p):STATE.tab===1?tabImagem(p):STATE.tab===2?tabStories(p):STATE.tab===3?tabProducao(p):tabAds(p))+'</div>'
+    +'</div>';
+}
+
+// ═══ TAB TEXTO — prompt pronto para copiar e colar no Claude ══════════════════
+
+// ═══ TAB IMAGEM — prompts Gemini em português, dinâmicos por post ═══════════
+
+// ═══ TAB STORIES — sequência estratégica diária ════════════════════════════
+
+// ═══ MÓDULO STORIES DIÁRIO (tab principal) ════════════════════════════════════
+function storiesHTML(){
+  var hoje=new Date();
+  var diaHoje=hoje.getDate();
+  var evs=EVENTOS[STATE.mes]||[];
+  var evHoje=evs.find(function(e){return e.d===diaHoje;});
+  carregarPosts();
+  var postHoje=STATE.posts.find(function(p){return p.dia===diaHoje;});
+  var prompt="Actua como especialista em Stories para Instagram que geram conexao, autoridade e vendas de forma natural.\n\n"
+    +"INFORMACOES DO PERFIL:\n"
+    +"- Handle: "+CFG.handle+"\n"
+    +"- Nicho: espiritualidade, terapias, produtos rituais\n"
+    +"- O que vende: "+CFG.produtos+"\n"
+    +"- Oferta activa: "+CFG.ofertaAtiva+"\n"
+    +"- Publico: "+CFG.audiencia+"\n"
+    +"- Estilo: intimo, acolhedor, poetico. Tuteia.\n\n"
+    +"CONTEXTO DE HOJE ("+diaHoje+" de "+MESES[STATE.mes]+" "+STATE.ano+"):\n"
+    +(evHoje?"- Data especial: "+evHoje.l+"\n":"- Dia normal - foco em conexao e bastidores\n")
+    +(postHoje?"- Post agendado: "+postHoje.title+(postHoje.product?" ("+postHoje.product+")":"")+"\n":"- Sem post no feed hoje\n")
+    +"\nREGRA: 80% conexao, 15% educacao, 5% oferta\n"
+    +"Os Stories precisam parecer humanos, leves e espontaneos.\n\n"
+    +"CRIA UMA SEQUENCIA DE 7 STORIES PARA HOJE:\n\n"
+    +"Story 1 - Rotina/bastidores (conexao real)\n"
+    +"Story 2 - Pensamento ou reflexao do dia (max 2 linhas)\n"
+    +"Story 3 - Enquete ou caixa de perguntas\n"
+    +"Story 4 - Bastidores ou processo\n"
+    +"Story 5 - Mini-ensinamento (1 dica pratica)\n"
+    +"Story 6 - Momento humano e espontaneo\n"
+    +"Story 7 - CTA suave\n\n"
+    +"Para cada Story: Fala/texto + Sugestao visual + Intencao estrategica\n\n"
+    +"GANCHOS: 'Ja passaste por isto?' / 'Ninguem te conta isto, mas...' / 'O que mudou tudo foi...'\n"
+    +"CTAs LEVES: 'Manda-me uma mensagem' / 'Explico no direct' / 'Link na bio'";
+  var stKey="stories_"+STATE.ano+"-"+pad(STATE.mes)+"-"+pad(diaHoje);
+  var stSalvos=LS.get(stKey)||{};
+  var checkItems=["Story 1 gravado","Story 2 gravado","Story 3 gravado (enquete)","Story 4 gravado","Story 5 gravado","Story 6 gravado","Story 7 gravado","Publicado no Instagram"];
+  var done=checkItems.filter(function(_,i){return stSalvos["c"+i];}).length;
+  return'<div class="card">'
+    +'<div class="card-title">Stories Diarios</div>'
+    +'<div class="card-sub">'+diaHoje+' de '+MESES[STATE.mes]+' '+STATE.ano+(evHoje?' - <b>'+esc(evHoje.l)+'</b>':"")+'</div>'
+    +(postHoje?'<div class="alert-sage">Post hoje: <b>'+esc(postHoje.title)+'</b> - Liga os Stories ao post!</div>'
+      :'<div class="alert-gold">Sem post no feed hoje - Stories de conexao pura.</div>')
+    +'</div>'
+    +'<div class="card">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--brown);margin-bottom:6px;">Progresso dos Stories</div>'
+    +'<div class="progress-bar-bg"><div class="progress-bar" style="width:'+Math.round(done/checkItems.length*100)+'%;"></div></div>'
+    +checkItems.map(function(s,i){
+      var d2=stSalvos["c"+i];
+      return'<div class="check-item'+(d2?" done":"")+'" onclick="toggleStoryCheck(\''+stKey+'\','+i+')">'
+        +'<div class="check-box">'+(d2?"v":"")+'</div><div class="check-label">'+esc(s)+'</div></div>';
+    }).join("")
+    +(done===checkItems.length?'<div style="text-align:center;margin-top:10px;padding:12px;background:var(--sage-l);border-radius:8px;font-family:\'Cormorant Garamond\',serif;font-size:17px;color:#2a5a22;">Stories do dia concluidos!</div>':'')
+    +'</div>'
+    +'<div class="card">'
+    +'<div class="card-title">Prompt - 7 Stories de hoje</div>'
+    +'<div class="card-sub">Copia e cola no Claude (nova conversa). Nao gasta tokens desta sessao.</div>'
+    +'<div class="prompt-box"><div class="prompt-txt" id="st-prompt">'+esc(prompt)+'</div>'
+    +'<button class="copy-btn" onclick="cpText(\'st-prompt\')">copiar</button></div>'
+    +'</div>'
+    +'<div class="card">'
+    +'<div class="card-title">Proximas datas especiais</div>'
+    +(EVENTOS[STATE.mes]||[]).filter(function(e){return e.d>=diaHoje;}).slice(0,4).map(function(e){
+      return'<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">'
+        +'<div style="min-width:28px;font-family:\'Cormorant Garamond\',serif;font-size:17px;color:var(--brown);font-weight:600;">'+e.d+'</div>'
+        +'<div style="font-size:12px;color:var(--text);">'+esc(e.l)+'</div></div>';
+    }).join("")
+    +'</div>';
+}
+function toggleStoryCheck(key,idx){
+  var s=LS.get(key)||{};
+  s["c"+idx]=!s["c"+idx];
+  LS.set(key,s);renderBody();
+}
+
+function tabProducao(p){
+  var steps=[
+    {k:"a",l:"Prompt de texto copiado"},
+    {k:"b",l:"Conteudo gerado (guiao + legenda + hashtags)"},
+    {k:"c",l:"Gemini Imagen: foto do produto gerada"},
+    {k:"d",l:"Gemini Veo Clip A: reveal gerado"},
+    {k:"e",l:"Gemini Veo Clip B: spray gerado"},
+    {k:"f",l:"CapCut/Canva: montagem concluida"},
+    {k:"g",l:"ManyChat: keyword '"+esc(p.cta||"-")+"' configurada"},
+    {k:"h",l:"Prompt de Stories copiado"},
+    {k:"i",l:"7 Stories gravados e editados"},
+    {k:"j",l:"Post agendado para 13h00"},
+    {k:"k",l:"PUBLICADO"}
+  ];
+  var ck=STATE.chk[p.id]||{};
+  var done=steps.filter(function(s){return ck[s.k];}).length;
+  return'<div class="progress-bar-bg"><div class="progress-bar" style="width:'+Math.round(done/steps.length*100)+'%;"></div></div>'
+    +'<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">'+done+'/'+steps.length+'</div>'
+    +steps.map(function(s){
+      return'<div class="check-item'+(ck[s.k]?" done":"")+'" onclick="toggleCheck(\''+esc(p.id)+'\',\''+s.k+'\')">'
+        +'<div class="check-box">'+(ck[s.k]?"v":"")+'</div><div class="check-label">'+s.l+'</div></div>';
+    }).join("")
+    +(done===steps.length?'<div style="text-align:center;margin-top:10px;padding:12px;background:var(--sage-l);border-radius:8px;font-family:\'Cormorant Garamond\',serif;font-size:17px;color:#2a5a22;">100% concluido!</div>':'');
+}
+function toggleCheck(pid,key){
+  if(!STATE.chk[pid])STATE.chk[pid]={};
+  STATE.chk[pid][key]=!STATE.chk[pid][key];saveChk();
+  var el=document.getElementById("tabc");if(el&&STATE.sel)el.innerHTML=tabProducao(STATE.sel);
+}
+
+function tabAds(p){
+  var bud=CFG.budgetAds;
+  var tofu=Math.round(bud*0.4),mofu=Math.round(bud*0.35),bofu=Math.round(bud*0.25);
+  var prompt="Especialista em Meta Ads para negocios de espiritualidade e bem-estar.\n\n"
+    +"PERFIL: "+CFG.handle+" - "+CFG.descricao+"\nAudiencia: "+CFG.audiencia+"\nOferta: "+CFG.ofertaAtiva+"\n\n"
+    +"POST A PROMOVER: "+p.title+(p.product?" ("+p.product+")":"")+"\nTipo: "+p.type+"\n\n"
+    +"ORCAMENTO: "+bud+"€/mes\n"
+    +"TOFU: "+tofu+"€ - alcance frio, mulheres 40-60 PT, espiritualidade/reiki\n"
+    +"MOFU: "+mofu+"€ - retargeting, quem viu 50%+ do video\n"
+    +"BOFU: "+bofu+"€ - lookalike de clientes\n\n"
+    +"ENTREGA:\n1. Headline (max 40 chars)\n2. Texto primario (max 125 chars)\n3. Hook primeiros 3 segundos\n4. Targeting recomendado\n5. Botao CTA\n6. KPIs alvo (CPM, CTR, CPA)\n\n"
+    +"REGRA: o anuncio deve parecer conteudo organico, nao anuncio. Nunca venda agressiva.";
+  return'<div class="card-sub">Prompt para copy e estrategia de Meta Ads. Orcamento: <b>'+bud+"€/mes</b></div>"
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:10px;">'
+    +'<div style="background:var(--sage-l);border-radius:8px;padding:9px;text-align:center;"><div style="font-size:13px;font-weight:600;color:#2a5a22;">'+tofu+"€</div><div style='font-size:9px;color:var(--muted);'>TOFU</div></div>"
+    +'<div style="background:var(--gold-l);border-radius:8px;padding:9px;text-align:center;"><div style="font-size:13px;font-weight:600;color:#5a3a08;">'+mofu+"€</div><div style='font-size:9px;color:var(--muted);'>MOFU</div></div>"
+    +'<div style="background:var(--rosa-l);border-radius:8px;padding:9px;text-align:center;"><div style="font-size:13px;font-weight:600;color:#7a1a1a;">'+bofu+"€</div><div style='font-size:9px;color:var(--muted);'>BOFU</div></div>"
+    +'</div>'
+    +'<div class="prompt-box"><div class="prompt-txt" id="p-ads">'+esc(prompt)+'</div>'
+    +'<button class="copy-btn" onclick="cpText(\'p-ads\')">copiar</button></div>'
+    +'<a href="https://adsmanager.facebook.com" target="_blank"><button class="btn btn-blue" style="margin-top:7px;">Abrir Meta Ads Manager</button></a>';
+}
+
+function adsHTML(){
+  var bud=CFG.budgetAds;
+  return'<div class="card"><div class="card-title">Meta Ads</div>'
+    +'<div class="card-sub">Orcamento: <b>'+bud+"€/mes</b> - Alterar em Config</div>"
+    +'<div class="alert-blue">Reels Ads: 22% mais engagement. Promover posts organicos validados = ROI 3-5x superior.</div>'
+    +'<div style="border-radius:8px;overflow:hidden;margin:10px 0;">'
+    +'<div style="background:var(--sage-l);padding:9px 12px;font-size:11px;"><b>TOFU '+Math.round(bud*0.4)+'€</b> - Alcance frio - Mulheres 40-60 PT - Espiritualidade/Reiki</div>'
+    +'<div style="background:var(--gold-l);padding:9px 12px;font-size:11px;border-top:1px solid var(--border);"><b>MOFU '+Math.round(bud*0.35)+'€</b> - Retargeting - Viu 50%+ do video</div>'
+    +'<div style="background:var(--rosa-l);padding:9px 12px;font-size:11px;border-top:1px solid var(--border);"><b>BOFU '+Math.round(bud*0.25)+'€</b> - Conversao - Lookalike de clientes</div>'
+    +'</div></div>'
+    +'<div class="card"><div class="card-title" style="font-size:14px;">Posts para promover</div>'
+    +(STATE.posts.filter(function(p){return p.status==="publicado"||p.status==="pronto";}).length>0
+      ?STATE.posts.filter(function(p){return p.status==="publicado"||p.status==="pronto";}).map(function(p){
+        return'<div class="post-item" onclick="abrirPost(\''+esc(p.id)+'\')">'
+          +'<div class="date-box"><div class="date-num">'+pad(p.dia)+'</div><div class="date-dow">'+DOWS[p.dow]+'</div></div>'
+          +'<div class="post-info"><div class="post-title">'+esc(p.title)+'</div>'
+          +'<div class="post-tags">'+pillTipo(p.type)+' '+pillStatus(p.status)+'</div></div>'
+          +'<div style="font-size:11px;color:var(--blue);font-weight:600;">Ads</div></div>';
+      }).join("")
+      :'<div style="font-size:12px;color:var(--muted);">Posts "Prontos" ou "Publicados" aparecem aqui para promover.</div>')
+    +'<a href="https://adsmanager.facebook.com" target="_blank"><button class="btn btn-blue" style="margin-top:8px;">Abrir Meta Ads Manager</button></a>'
+    +'</div>';
+}
+
+// ═══ ANALISES IA (correm uma vez, ficam guardadas) ════════════════════════════
+function analisarPerfil(){
+  var btn=document.getElementById("btn-perfil");
+  if(btn){btn.disabled=true;btn.textContent="A analisar...";}
+  STATE.dash.analisandoPerfil=true;saveDash();renderBody();
+  var W=WINDSOR;
+  var postsDesc=W.topPosts.map(function(p,i){
+    return (i+1)+". "+p.type+" ("+p.date+") Eng:"+p.eng+" Reach:"+p.reach+" Saves:"+p.saves+" Shares:"+p.shares+(p.watchTime?" Watch:"+p.watchTime+"s":"")+" -- "+p.caption.substring(0,80);
+  }).join("\n");
+  claude(
+    "Analisa o perfil Instagram "+CFG.handle+" como estrategista de crescimento, branding e conversao.\n\n"
+    +"DADOS REAIS Windsor.ai:\n"
+    +"Seguidores: "+W.followers+" | Seguindo: "+W.follows+" | Posts: "+W.media+" | Ultima publicacao: "+W.daysSince+" dias atras\n"
+    +"Alcance 30d: "+W.reach30+" | Engagement 30d: "+W.eng30+" | Views 30d: "+W.views30+"\n"
+    +"Audiencia: F.45-54 (28%), F.35-44 (19%), Portugal (78%), Brasil (15%)\n"
+    +"Top 5 posts:\n"+postsDesc+"\n\n"
+    +"Perfil: "+CFG.descricao+"\nAudiencia: "+CFG.audiencia+"\n\n"
+    +"Analisa: bio e posicionamento, consistencia, engagement, potencial de conversao, erros que travam crescimento.\n"
+    +"Entrega: 5 maiores problemas, o que ajustar primeiro, o que impede crescimento.\n\n"
+    +"Retorna JSON: {\"fortes\":\"3 pontos fortes separados por \\n\",\"melhorar\":\"3 pontos criticos separados por \\n\",\"acao\":\"accao mais urgente agora\"}",
+    function(err,raw){
+      STATE.dash.analisandoPerfil=false;
+      if(btn){btn.disabled=false;btn.textContent="Analise Perfil";}
+      var d=parseJ(raw,null);
+      STATE.dash.perfAnalysis=d||{
+        fortes:"Conteudo HAM/HET tem engagement excepcional (168 interacoes, 13.3s watch time)\nAudiencia F.45-54 Portugal -- nicho premium com alta intencao de compra\nCTA com keyword nos comentarios converte (45 comentarios no EU QUERO)",
+        melhorar:"137 dias sem publicar -- critico. O algoritmo penaliza inactividade\nRacio seguindo/seguidores desfavoravel (1907 vs 1210) -- parar de seguir inactivos\nSaves muito baixos (0-8) -- o algoritmo 2026 prioriza saves. Criar conteudo educativo",
+        acao:"Publicar Reel de regresso em 1 junho com CTA EU VOLTEI -- conteudo emocional sobre o silencio dos ultimos 137 dias"
+      };
+      saveDash();renderBody();
+      setTimeout(function(){var el=document.getElementById("sec-perfil");if(el)el.scrollIntoView({behavior:"smooth"});},150);
+    },
+    "Analista de Instagram. Responde em portugues de Portugal. Retorna APENAS JSON valido.",800
+  );
+}
+
+function analisarNicho(){
+  var btn=document.getElementById("btn-nicho");
+  if(btn){btn.disabled=true;btn.textContent="A pesquisar...";}
+  STATE.dash.analisandoNicho=true;saveDash();renderBody();
+  claude(
+    "Analisa o nicho de espiritualidade/bem-estar/rituais no Instagram e TikTok para "+CFG.handle+".\n"
+    +"Perfil: "+CFG.descricao+"\nAudiencia: "+CFG.audiencia+"\nProdutos: "+CFG.produtos+"\n\n"
+    +"Analisa: topicos em alta em 2026, formatos com mais alcance, o que bomba no TikTok PT e Brasil, oportunidades para este perfil.\n\n"
+    +"Retorna JSON: {\"topicos\":\"5-6 topicos em alta separados por \\n\",\"trending\":\"o que esta a bombar -- formatos, hooks, tendencias 2026\",\"oportunidades\":\"3 oportunidades especificas para "+CFG.handle+"\"}",
+    function(err,raw){
+      STATE.dash.analisandoNicho=false;
+      if(btn){btn.disabled=false;btn.textContent="Analise Nicho";}
+      var d=parseJ(raw,null);
+      STATE.dash.nichoAnalysis=d||{
+        topicos:"Rituais de lua cheia/nova -- +340% reach em 2026\nSagrado feminino e reconexao com o corpo\nEscalda-pes e rituais de pes -- micro-trend TikTok PT\nCristais + ciencia -- educacao que valida o espiritual\nMeditacoes guiadas 60-90s para ansiedade\nEquinocios e solsticios -- picos de engagement 3x",
+        trending:"Reels 30-60s com hook de choque nos primeiros 3s. POV: sou a tua terapeuta tem 22M+ views. Series de 7 dias geram +400% saves. ASMR botanico emergente. Duetos espirituais (collab) viralizaram.",
+        oportunidades:"Serie Ritual de Lua com Elixir -- 12 posts mensais sincronizados com fases lunares\nASMR botanico com o frasco Elixir -- nicho com 50M+ views no TikTok\nCollab com terapeuta PT/BR para alcance duplo"
+      };
+      saveDash();renderBody();
+      setTimeout(function(){var el=document.getElementById("sec-nicho");if(el)el.scrollIntoView({behavior:"smooth"});},150);
+    },
+    "Especialista em marketing digital 2026. Responde em portugues de Portugal. Retorna APENAS JSON valido.",800
+  );
+}
+
+function postsVirais(){
+  var btn=document.getElementById("btn-viral");
+  if(btn){btn.disabled=true;btn.textContent="A criar...";}
+  STATE.dash.analisandoViral=true;saveDash();renderBody();
+  var W=WINDSOR;
+  var nicho=STATE.dash.nichoAnalysis||{};
+  var topDesc=W.topPosts.slice(0,3).map(function(p){
+    return "- "+p.type+": "+p.caption.substring(0,100)+" [Eng:"+p.eng+", Reach:"+p.reach+"]";
+  }).join("\n");
+  claude(
+    "Cria 10 ideias de posts virais para "+CFG.handle+" para "+MESES[STATE.mes]+" "+STATE.ano+".\n\n"
+    +"TOP POSTS ACTUAIS:\n"+topDesc+"\n\n"
+    +"TENDENCIAS DO NICHO:\n"+(nicho.trending||"Reels 30-60s, hooks de choque, rituais lunares, ASMR botanico")+"\n\n"
+    +"TOPICOS EM ALTA:\n"+(nicho.topicos||"rituais, cristais, luas, sagrado feminino")+"\n\n"
+    +"AUDIENCIA: "+CFG.audiencia+"\nPRODUTOS: "+CFG.produtos+"\nCTAs: "+CFG.ctas+"\n\n"
+    +"Retorna JSON: {\"formula\":\"o que os top posts tem em comum\",\"ideias\":[{\"titulo\":\"...\",\"tipo\":\"REEL ou CARROSSEL ou IMAGEM\",\"hook\":\"primeiros 3 segundos\",\"cta\":\"keyword\",\"porque\":\"porque vai viralizar\"}]}",
+    function(err,raw){
+      STATE.dash.analisandoViral=false;
+      if(btn){btn.disabled=false;btn.textContent="Posts Virais";}
+      var d=parseJ(raw,null);
+      STATE.dash.postsViral=d||{
+        formula:"CTA com keyword + conteudo emocional + portal espiritual + storytelling pessoal",
+        ideias:[
+          {titulo:"Lua Cheia -- O que esta lua veio revelar",tipo:"REEL",hook:"Esta lua nao veio para te dar paz. Veio para te mostrar a verdade.",cta:"LUA",porque:"Rituais lunares +340% reach"},
+          {titulo:"Por que estive em silencio 137 dias",tipo:"REEL",hook:"Estive em silencio 137 dias. Nao foi ausencia. Foi preparacao.",cta:"EU VOLTEI",porque:"Vulnerabilidade autentica = viral"},
+          {titulo:"O que e o HAM -- explicado simplesmente",tipo:"REEL",hook:"Ha 3 anos aprendi algo que ninguem me tinha dito sobre o coracao.",cta:"HAM",porque:"HAM e o teu conteudo com maior engagement"},
+          {titulo:"Elixir Limpeza -- ASMR botanico",tipo:"REEL",hook:"[sem voz -- so o som do alambique e das ervas]",cta:"ELIXIR",porque:"ASMR botanico 50M+ views TikTok"},
+          {titulo:"Portal 7/7 -- Ritual de 2 minutos",tipo:"REEL",hook:"Hoje e 7. Este numero nao e coincidencia.",cta:"PORTAL",porque:"Portais geram picos de engagement 3x"},
+          {titulo:"O que e o Elixir Limpeza -- 7 slides",tipo:"CARROSSEL",hook:"Toda a gente fala em energia. Ninguem te diz como limpa-la.",cta:"ELIXIR",porque:"Carrosseis educativos 3x mais saves"},
+          {titulo:"5 rituais de manha que mudaram a minha energia",tipo:"CARROSSEL",hook:"5 rituais. 15 minutos. Campo completamente diferente.",cta:"RITUAL",porque:"Listas praticas alto potencial de saves"},
+          {titulo:"Depoimento -- O Elixir mudou o ambiente da minha casa",tipo:"IMAGEM",hook:"Nao acreditava. Agora nao consigo imaginar sem ele.",cta:"comentar",porque:"Social proof e o gatilho de conversao mais forte"},
+          {titulo:"Serie: 7 dias de ritual lunar -- Dia 1",tipo:"REEL",hook:"Durante 7 dias vou mostrar o meu ritual lunar completo.",cta:"LUA",porque:"Series de 7 dias +400% saves e retorno diario"},
+          {titulo:"Collab com terapeuta -- Imersao presencial Lisboa",tipo:"IMAGEM",hook:"Dois campos de trabalho. Uma transformacao.",cta:"SIM",porque:"Collab duplica o alcance imediatamente"}
+        ]
+      };
+      saveDash();renderBody();
+      setTimeout(function(){var el=document.getElementById("sec-viral");if(el)el.scrollIntoView({behavior:"smooth"});},150);
+    },
+    "Especialista em conteudo viral Instagram. Responde em portugues de Portugal. Retorna APENAS JSON valido.",800
+  );
+}
+
+function addPostFromIdeia(idx){
+  var ideias=(STATE.dash&&STATE.dash.postsViral&&STATE.dash.postsViral.ideias)||[];
+  var ideia=ideias[idx];if(!ideia)return;
+  var dia=new Date().getDate()+idx+1;
+  var dim=new Date(STATE.ano,STATE.mes,0).getDate();
+  if(dia>dim)dia=dim;
+  var _titulo=ideia.titulo||ideia.title||ideia.nome||"";var _tipo=ideia.tipo||ideia.type||"REEL";var _cta=ideia.cta||ideia.keyword||"comentar";
+  adicionarPost({dia:dia,type:_tipo,phase:"consistencia",title:_titulo,product:"",cta:_cta,spiritual:null,highlight:false});
+  STATE.mod=1;
+  for(var i=0;i<5;i++){var b=document.getElementById("nb-"+i);if(b)b.className="nav-btn"+(i===1?" active":"");}
+  renderBody();
+}
+
+function gerarCalComAnalise(){
+  STATE._viralContext=(STATE.dash.nichoAnalysis?STATE.dash.nichoAnalysis.topicos:"")
+    +" | "+(STATE.dash.postsViral?(STATE.dash.postsViral.ideias||[]).slice(0,5).map(function(p){return p.titulo;}).join(", "):"");
+  STATE.mod=1;
+  for(var i=0;i<5;i++){var b=document.getElementById("nb-"+i);if(b)b.className="nav-btn"+(i===1?" active":"");}
+  renderBody();
+  setTimeout(gerarCalIA,200);
+}
+
+function gerarCalIA(){
+  var btn=document.getElementById("btn-geria");
+  if(btn){btn.disabled=true;btn.textContent="A gerar...";}
+  STATE.aiLoading=true;renderBody();
+  var evs=(EVENTOS[STATE.mes]||[]).map(function(e){return e.d+": "+e.l;}).join(", ");
+  var viralCtx=STATE._viralContext||"";
+  claude(
+    "Calendario Instagram "+MESES[STATE.mes]+" "+STATE.ano+" para "+CFG.handle+"."
+    +" Audiencia: "+CFG.audiencia+" Produtos: "+CFG.produtos
+    +" Datas especiais: "+evs+"."
+    +(viralCtx?" Incorpora: "+viralCtx:"")
+    +" Regras: Seg=REEL, Qua=CARROSSEL, Sex=REEL. Mix: 40% REEL, 35% CARROSSEL, 25% IMAGEM."
+    +" Funil: dias 1-10=reativacao, 11-20=consistencia, 21-31=conversao."
+    +" CTAs: "+CFG.ctas
+    +" Retorna JSON: {\"posts\":[{\"dia\":1,\"type\":\"REEL\",\"phase\":\"reativacao\",\"title\":\"titulo criativo\",\"product\":\"produto ou vazio\",\"cta\":\"keyword\",\"spiritual\":null,\"highlight\":false}]}"
+    +" Gera exactamente 10 posts. Titulos criativos.",
+    function(err,raw){
+      STATE.aiLoading=false;
+      if(err||!raw){alert("Erro ao gerar. "+(err?err.message:""));renderBody();return;}
+      var d=parseJ(raw,null);
+      var arr=d&&d.posts?d.posts:(Array.isArray(d)?d:null);
+      if(!arr||arr.length===0){
+        var dim2=new Date(STATE.ano,STATE.mes,0).getDate();
+        var evMap={};(EVENTOS[STATE.mes]||[]).forEach(function(e){evMap[e.d]=e;});
+        var dias=[],tipos=["REEL","CARROSSEL","IMAGEM","REEL","CARROSSEL","REEL","IMAGEM","CARROSSEL","REEL","REEL"];
+        var temas=["Ritual de inicio de mes","Educacao sobre os produtos","Depoimento de cliente","Data especial","Bastidores","Dicas de bem-estar","Collab","Produto em destaque","Intencoes e rituais","Gratidao e fecho"];
+        for(var dd=1;dd<=dim2;dd++){var dow=new Date(STATE.ano,STATE.mes-1,dd).getDay();if(dow===1||dow===3||dow===5||evMap[dd])dias.push(dd);}
+        dias=[...new Set(dias)].slice(0,10);
+        arr=dias.map(function(dia,i){var ev=evMap[dia];return{dia:dia,type:tipos[i%tipos.length],phase:i<4?"reativacao":i<7?"consistencia":"conversao",title:ev?ev.l+" -- "+temas[i%temas.length]:temas[i%temas.length],product:i%3===0?CFG.produtos.split(",")[0].trim():"",cta:CFG.ctas.split(",")[i%8].trim(),spiritual:ev?ev.l:null,highlight:!!ev};});
+      }
+      var dim=new Date(STATE.ano,STATE.mes,0).getDate();
+      STATE.posts=arr.filter(function(p){return p&&p.dia>=1&&p.dia<=dim&&p.title;})
+        .map(function(p){return{id:STATE.ano+"-"+pad(STATE.mes)+"-"+pad(p.dia)+"_"+Date.now(),dia:p.dia,dow:new Date(STATE.ano,STATE.mes-1,p.dia).getDay(),type:p.type||"REEL",phase:p.phase||"consistencia",title:p.title,product:p.product||"",cta:p.cta||"comentar",spiritual:p.spiritual||null,highlight:!!p.highlight,status:"pending"};})
+        .sort(function(a,b){return a.dia-b.dia;});
+      salvarPosts();renderBody();
+    },
+    "Retorna APENAS JSON valido sem markdown.",2000
+  );
+}
+
+
+// INIT
+var _v=document.getElementById("hdr-version");if(_v)_v.textContent="v"+AURA_VERSION.version;
+var _vb=document.getElementById("version-bar");if(_vb)_vb.textContent="AURA v"+AURA_VERSION.version+" · "+AURA_VERSION.build;
+carregarPosts();
+var hdr=document.getElementById("hdr-handle");if(hdr)hdr.textContent=CFG.handle;
+renderBody();
+
+// ═══ CONFIG TAB ═══════════════════════════════════════════════════════════════
+function configHTML(){
+  function srvRow(s){
+    return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">'
+      +'<div style="flex:1;"><div style="font-size:12px;font-weight:600;color:var(--text);">'+esc(s.nome)+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);">'+esc(s.desc)+'</div></div>'
+      +'<span class="pill '+(s.tipo==="workshop"?"pill-gold":"pill-sage")+'">'+esc(s.tipo)+'</span>'
+      +'<div style="font-size:12px;font-weight:600;color:var(--brown);min-width:60px;text-align:right;">'+esc(s.preco)+'</div>'
+      +'</div>';
+  }
+  function prodRow(p){
+    return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">'
+      +'<div style="flex:1;"><div style="font-size:12px;font-weight:600;color:var(--text);">'+esc(p.nome)+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);">'+esc(p.desc)+'</div></div>'
+      +'<div style="font-size:12px;font-weight:600;color:var(--brown);">'+esc(p.preco)+'</div>'
+      +'</div>';
+  }
+  return '<div class="card">'
+    +'<div class="card-title">Configuracao do Perfil</div>'
+    +'<div class="card-sub">Estes dados alimentam todos os prompts automaticamente.</div>'
+    +'<div class="form-group"><label class="form-label">Handle Instagram</label>'
+    +'<input class="form-input" id="c-handle" value="'+esc(CFG.handle)+'"></div>'
+    +'<div class="form-group"><label class="form-label">Titulo / Especialidade</label>'
+    +'<input class="form-input" id="c-titulo" value="'+esc(CFG.titulo)+'"></div>'
+    +'<div class="form-group"><label class="form-label">Proposta de valor</label>'
+    +'<textarea class="form-textarea" id="c-proposta">'+esc(CFG.proposta)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Audiencia</label>'
+    +'<textarea class="form-textarea" id="c-audiencia">'+esc(CFG.audiencia)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Tom de voz</label>'
+    +'<textarea class="form-textarea" id="c-tom">'+esc(CFG.tom)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Oferta activa agora</label>'
+    +'<input class="form-input" id="c-oferta" placeholder="Ex: Consultas individuais abertas — Julho" value="'+esc(CFG.ofertaAtiva)+'"></div>'
+    +'<div class="form-group"><label class="form-label">Orcamento Ads (EUR/mes)</label>'
+    +'<input class="form-input" type="number" id="c-budget" value="'+CFG.budgetAds+'"></div>'
+    +'<button class="btn btn-dark" onclick="salvarConfigTab()">Guardar Configuracao</button>'
+    +'</div>'
+    +'<div class="card"><div class="card-title">Servicos e Workshops</div>'
+    +(CFG.servicos||[]).map(srvRow).join("")
+    +'<button class="btn btn-muted" style="margin-top:8px;" onclick="editarServicos()">Editar Servicos</button>'
+    +'</div>'
+    +'<div class="card"><div class="card-title">Produtos</div>'
+    +(CFG.produtos||[]).map(prodRow).join("")
+    +'<button class="btn btn-muted" style="margin-top:8px;" onclick="editarProdutos()">Editar Produtos</button>'
+    +'</div>'
+    +'<div class="card"><div class="card-title">Pilares de Conteudo</div>'
+    +(CFG.pilares||[]).map(function(p){
+      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+        +'<div style="font-size:12px;font-weight:600;color:var(--text);min-width:100px;">'+esc(p.nome)+'</div>'
+        +'<div style="flex:1;background:var(--border);border-radius:20px;height:8px;overflow:hidden;">'
+        +'<div style="width:'+p.pct+'%;height:100%;background:var(--sage);border-radius:20px;"></div></div>'
+        +'<div style="font-size:11px;font-weight:600;color:var(--muted);min-width:32px;">'+p.pct+'%</div>'
+        +'</div>';
+    }).join("")
+    +'<button class="btn btn-muted" style="margin-top:8px;" onclick="editarPilares()">Editar Pilares</button>'
+    +'</div>'
+    +'<div class="card"><div class="card-title">Ferramentas Disponiveis</div>'
+    +(CFG.ferramentas||[]).map(function(f){
+      return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">'
+        +'<div style="font-size:12px;font-weight:600;color:var(--brown);min-width:100px;">'+esc(f.nome)+'</div>'
+        +'<div style="font-size:12px;color:var(--muted);">'+esc(f.uso)+'</div>'
+        +'</div>';
+    }).join("")
+    +'</div>'
+    +'<div class="card"><div class="card-title">CTAs por Categoria</div>'
+    +'<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">SERVICOS</div><div style="font-size:12px;">'+esc(CFG.ctasServicos)+'</div></div>'
+    +'<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">EDUCACAO</div><div style="font-size:12px;">'+esc(CFG.ctasEducacao)+'</div></div>'
+    +'<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">COMUNIDADE</div><div style="font-size:12px;">'+esc(CFG.ctasComunidade)+'</div></div>'
+    +'<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:3px;">PRODUTOS</div><div style="font-size:12px;">'+esc(CFG.ctasProdutos)+'</div></div>'
+    +'</div>';
+}
+
+function salvarConfigTab(){
+  CFG.handle    = document.getElementById("c-handle").value.trim()||CFG.handle;
+  CFG.titulo    = document.getElementById("c-titulo").value.trim()||CFG.titulo;
+  CFG.proposta  = document.getElementById("c-proposta").value.trim()||CFG.proposta;
+  CFG.audiencia = document.getElementById("c-audiencia").value.trim()||CFG.audiencia;
+  CFG.tom       = document.getElementById("c-tom").value.trim()||CFG.tom;
+  CFG.ofertaAtiva = document.getElementById("c-oferta").value.trim();
+  CFG.budgetAds   = parseInt(document.getElementById("c-budget").value)||50;
+  salvarCFG();
+  var h=document.getElementById("hdr-handle"); if(h) h.textContent=CFG.handle;
+  renderBody();
+  alert("Configuracao guardada!");
+}
+
+function editarServicos(){
+  document.getElementById("modal-title").textContent="Editar Servicos e Workshops";
+  var rows=(CFG.servicos||[]).map(function(s,i){
+    return '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;margin-bottom:6px;">'
+      +'<input class="form-input" id="sn-'+i+'" value="'+esc(s.nome)+'" placeholder="Nome">'
+      +'<select class="form-select" id="st-'+i+'">'
+      +'<option value="servico"'+(s.tipo==="servico"?" selected":"")+'>Servico</option>'
+      +'<option value="workshop"'+(s.tipo==="workshop"?" selected":"")+'>Workshop</option>'
+      +'</select>'
+      +'<input class="form-input" id="sp-'+i+'" value="'+esc(s.preco)+'" placeholder="Preco">'
+      +'</div>';
+  }).join("");
+  document.getElementById("modal-body").innerHTML=
+    '<div class="alert-sage" style="margin-bottom:10px;">Os servicos sao o foco principal. Actualiza os precos quando abrires agendas.</div>'
+    +rows+'<button class="btn btn-dark" onclick="guardarServicos()">Guardar</button>';
+  document.getElementById("modal").style.display="flex";
+}
+
+function guardarServicos(){
+  var novos=[];
+  for(var i=0;i<(CFG.servicos||[]).length;i++){
+    var n=document.getElementById("sn-"+i);var t=document.getElementById("st-"+i);var p=document.getElementById("sp-"+i);
+    if(n&&n.value.trim()) novos.push({nome:n.value.trim(),desc:CFG.servicos[i].desc||"",tipo:t?t.value:"servico",preco:p?p.value.trim():"A definir"});
+  }
+  CFG.servicos=novos; salvarCFG(); fecharModal(); renderBody();
+}
+
+function editarProdutos(){
+  document.getElementById("modal-title").textContent="Editar Produtos";
+  var rows=(CFG.produtos||[]).map(function(p,i){
+    return '<div style="display:grid;grid-template-columns:2fr 2fr 1fr;gap:6px;margin-bottom:6px;">'
+      +'<input class="form-input" id="pn-'+i+'" value="'+esc(p.nome)+'" placeholder="Nome">'
+      +'<input class="form-input" id="pd-'+i+'" value="'+esc(p.desc)+'" placeholder="Descricao">'
+      +'<input class="form-input" id="pp-'+i+'" value="'+esc(p.preco)+'" placeholder="Preco">'
+      +'</div>';
+  }).join("");
+  document.getElementById("modal-body").innerHTML=
+    '<div class="alert-gold" style="margin-bottom:10px;">Os produtos aparecem em segundo plano. O foco sao os servicos.</div>'
+    +rows+'<button class="btn btn-dark" onclick="guardarProdutos()">Guardar</button>';
+  document.getElementById("modal").style.display="flex";
+}
+
+function guardarProdutos(){
+  var novos=[];
+  for(var i=0;i<(CFG.produtos||[]).length;i++){
+    var n=document.getElementById("pn-"+i);var d=document.getElementById("pd-"+i);var p=document.getElementById("pp-"+i);
+    if(n&&n.value.trim()) novos.push({nome:n.value.trim(),desc:d?d.value.trim():"",preco:p?p.value.trim():"A definir"});
+  }
+  CFG.produtos=novos; salvarCFG(); fecharModal(); renderBody();
+}
+
+function editarPilares(){
+  document.getElementById("modal-title").textContent="Editar Pilares de Conteudo";
+  var total=(CFG.pilares||[]).reduce(function(s,p){return s+p.pct;},0);
+  var rows=(CFG.pilares||[]).map(function(p,i){
+    return '<div style="display:grid;grid-template-columns:2fr 60px 3fr;gap:6px;margin-bottom:6px;">'
+      +'<input class="form-input" id="pin-'+i+'" value="'+esc(p.nome)+'" placeholder="Nome">'
+      +'<input class="form-input" id="pip-'+i+'" type="number" min="0" max="100" value="'+p.pct+'">'
+      +'<input class="form-input" id="pid-'+i+'" value="'+esc(p.desc)+'" placeholder="Descricao">'
+      +'</div>';
+  }).join("");
+  document.getElementById("modal-body").innerHTML=
+    '<div class="alert-gold" style="margin-bottom:10px;">Total actual: <b>'+total+'%</b>. A soma deve ser 100%.</div>'
+    +rows+'<button class="btn btn-dark" onclick="guardarPilares()">Guardar</button>';
+  document.getElementById("modal").style.display="flex";
+}
+
+function guardarPilares(){
+  var novos=[],total=0;
+  for(var i=0;i<(CFG.pilares||[]).length;i++){
+    var n=document.getElementById("pin-"+i);var p=document.getElementById("pip-"+i);var d=document.getElementById("pid-"+i);
+    if(n&&n.value.trim()){var pct=parseInt(p?p.value:0)||0;total+=pct;novos.push({nome:n.value.trim(),pct:pct,desc:d?d.value.trim():""});}
+  }
+  if(total!==100){alert("A soma tem de ser 100%. Actual: "+total+"%.");return;}
+  CFG.pilares=novos; salvarCFG(); fecharModal(); renderBody();
+}
+
+// ═══ PROJECT TAB ══════════════════════════════════════════════════════════════
+function projectHTML(){
+  var NL="\n";
+  var perfilMd="# Perfil -- "+CFG.handle+NL+NL
+    +"## Identidade"+NL
+    +"Nome: "+CFG.nome+NL+"Titulo: "+CFG.titulo+NL
+    +"Localizacao: "+CFG.localizacao+NL+"Website: "+CFG.website+NL+NL
+    +"## Especialidades Terapeuticas"+NL
+    +"Cosmetologia natural, Fitoterapia ocidental e oriental, Reiki Usui (Mestre), "
+    +"Activacoes HAM/HET, Oleos essenciais, Meditacao e Mindfulness, Apometria, "
+    +"Leitura de Aura, Farmacia (PT/BR)"+NL+NL
+    +"## Posicionamento"+NL+CFG.proposta+NL+NL
+    +"## Audiencia"+NL+CFG.audiencia+NL+NL
+    +"## Tom de Voz"+NL+CFG.tom+NL+NL
+    +"## Formato de Reels"+NL+CFG.formatoReels+NL+NL
+    +"## Ambientes Visuais"+NL+CFG.ambientes+NL+NL
+    +"## Oferta Activa"+NL+(CFG.ofertaAtiva||"Nenhuma")+NL;
+
+  var servicosMd="# Servicos e Produtos -- "+CFG.handle+NL+NL
+    +"## Servicos"+NL
+    +(CFG.servicos||[]).map(function(s){return "- "+s.nome+" ["+s.tipo+"] "+s.preco+" -- "+s.desc;}).join(NL)+NL+NL
+    +"## Produtos (segundo plano)"+NL
+    +(CFG.produtos||[]).map(function(p){return "- "+p.nome+" "+p.preco+" -- "+p.desc;}).join(NL)+NL;
+
+  var estrategiaMd="# Estrategia de Conteudo -- "+CFG.handle+NL+NL
+    +"## Pilares"+NL+(CFG.pilares||[]).map(function(p){return "- "+p.pct+"% "+p.nome+" -- "+p.desc;}).join(NL)+NL+NL
+    +"## CTAs"+NL
+    +"- Servicos: "+CFG.ctasServicos+NL
+    +"- Educacao: "+CFG.ctasEducacao+NL
+    +"- Comunidade: "+CFG.ctasComunidade+NL
+    +"- Produtos: "+CFG.ctasProdutos+NL+NL
+    +"## Ferramentas"+NL
+    +(CFG.ferramentas||[]).map(function(f){return "- "+f.nome+": "+f.uso;}).join(NL)+NL+NL
+    +"## Performance (Windsor.ai)"+NL
+    +"Seguidores: "+WINDSOR.followers+" | Alcance 30d: "+WINDSOR.reach30+" | Engagement: "+WINDSOR.eng30+NL
+    +"Audiencia: F.45-54 (28%), Portugal (78%), Brasil (15%)"+NL+NL
+    +"## Top Posts de Referencia"+NL
+    +WINDSOR.topPosts.map(function(p){return "- "+p.type+" ("+p.date+"): "+p.caption+" Eng:"+p.eng+" Reach:"+p.reach;}).join(NL)+NL;
+
+  var instrucoesMd="# Instrucoes para o Claude -- "+CFG.handle+NL+NL
+    +"## Regras absolutas"+NL
+    +"1. Sempre Portugues de Portugal"+NL
+    +"2. Tutear sempre"+NL
+    +"3. Tom: "+CFG.tom+NL
+    +"4. Nunca linguagem de vendas agressiva"+NL
+    +"5. CTA sempre natural, nunca forcado"+NL
+    +"6. Le sempre os ficheiros do projecto antes de gerar conteudo"+NL+NL
+    +"## Especialidades a mencionar"+NL
+    +"Cosmetologia natural, Fitoterapia, Reiki, HAM/HET, Oleos essenciais, Meditacao, Apometria"+NL+NL
+    +"## Padrao que funciona"+NL
+    +"Voice-over poetico + imagens natureza/ritual + CTA natural = 45+ comentarios"+NL+NL
+    +"## Ferramentas disponiveis"+NL
+    +(CFG.ferramentas||[]).map(function(f){return "- "+f.nome+": "+f.uso;}).join(NL)+NL+NL
+    +"## NAO usar"+NL
+    +"- Nomes de produtos especificos de IA nos prompts"+NL
+    +"- Prompts complexos que gastem todos os creditos Gemini"+NL
+    +"- Imagens com fundo escuro"+NL
+    +"- Linguagem de loja/produto como foco principal"+NL;
+
+  window._projDocs={perfilMd:perfilMd,servicosMd:servicosMd,estrategiaMd:estrategiaMd,instrucoesMd:instrucoesMd};
+
+  var docs=[
+    {k:"perfilMd",f:"perfil.md",d:"Identidade, posicionamento, especialidades, audiencia, tom e ambientes visuais."},
+    {k:"servicosMd",f:"servicos.md",d:"Lista completa de servicos, workshops e produtos com precos."},
+    {k:"estrategiaMd",f:"estrategia.md",d:"Pilares, CTAs, dados Windsor, top posts e ferramentas."},
+    {k:"instrucoesMd",f:"instrucoes.md",d:"Regras absolutas, especialidades, padrao que funciona, o que nao usar."}
+  ];
+
+  return '<div class="card">'
+    +'<div class="card-title">Ficheiros para Claude Project</div>'
+    +'<div class="card-sub">Descarrega e carrega no Claude Project. Contexto permanente sem gastar tokens.</div>'
+    +'<div class="alert-gold">Como usar: claude.ai > New Project > Add content > carrega os 4 ficheiros.</div>'
+    +'</div>'
+    +'<div class="card">'
+    +docs.map(function(item){
+      return '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">'
+        +'<div style="font-size:24px;flex-shrink:0;">&#128196;</div>'
+        +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--brown);">'+esc(item.f)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);">'+esc(item.d)+'</div></div>'
+        +'<button class="btn btn-dark btn-sm" data-eid="'+item.k+'" onclick="dlDoc(this)">&#8595;</button>'
+        +'</div>';
+    }).join("")
+    +'<button class="btn btn-primary" onclick="downloadTodos()">&#8595; Descarregar os 4 Ficheiros</button>'
+    +'</div>'
+    +'<div class="card"><div class="card-title">Como configurar</div>'
+    +'<div style="font-size:12px;line-height:1.8;color:var(--text);">'
+    +'<b>1.</b> Vai a claude.ai > New Project<br>'
+    +'<b>2.</b> Nome: "AURA — Mariana Botelho"<br>'
+    +'<b>3.</b> Project instructions:<br>'
+    +'<div class="area" style="font-size:11px;margin:8px 0;">Trabalhas como assistente de conteudo de @marianabotelho.pt, terapeuta holistica. Le sempre os ficheiros do projecto. Portugues de Portugal. Gemini Plus para imagens. CapCut Pro para Reels. Canva para design.</div>'
+    +'<b>4.</b> Carrega os 4 ficheiros .md<br>'
+    +'<b>5.</b> Todas as conversas ja tem contexto completo'
+    +'</div></div>';
+}
+
+function dlDoc(btn){
+  var key=btn.getAttribute("data-eid");
+  if(!window._projDocs) return;
+  var content=window._projDocs[key];
+  if(!content) return;
+  var fname={"perfilMd":"perfil.md","servicosMd":"servicos.md","estrategiaMd":"estrategia.md","instrucoesMd":"instrucoes.md"}[key]||key+".md";
+  downloadMd(content,fname);
+}
+
+function downloadMd(cnt,fname){
+  if(!cnt){return;}
+  var blob=new Blob([cnt],{type:"text/markdown;charset=utf-8"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");a.href=url;a.download=fname;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadTodos(){
+  if(!window._projDocs) document.getElementById("body").innerHTML=projectHTML();
+  var docs=window._projDocs||{};
+  var files=[{k:"perfilMd",f:"perfil.md"},{k:"servicosMd",f:"servicos.md"},{k:"estrategiaMd",f:"estrategia.md"},{k:"instrucoesMd",f:"instrucoes.md"}];
+  files.forEach(function(item,i){
+    setTimeout(function(){if(docs[item.k]) downloadMd(docs[item.k],item.f);},i*500);
+  });
+}
+
+
+</script>
+</body>
+</html>

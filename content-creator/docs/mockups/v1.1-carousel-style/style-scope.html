@@ -1,0 +1,45 @@
+<h2>Como deve funcionar a escolha de estilo dos slides?</h2>
+<p class="subtitle">Compara as 3 opções. A imagem à esquerda em cada mockup é a tua foto real de referência.</p>
+
+<div class="cards">
+  <div class="card" data-choice="fixed" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;gap:6px;padding:8px;background:#efe4d0;">
+      <img src="./ref-hero.jpg" style="width:60px;height:75px;object-fit:cover;border-radius:4px;">
+      <img src="./ref-card2.jpg" style="width:60px;height:75px;object-fit:cover;border-radius:4px;">
+      <div style="width:60px;height:75px;background:#e7d1a8;border:1px solid #83ae37;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;color:#2D4A30;">texto</div>
+    </div>
+    <div class="card-body">
+      <h3>A — Fixo (Recomendado)</h3>
+      <p>Slide 1 é sempre foto-hero (upload opcional). Todos os outros slides são sempre cartão de texto. Sem decisões extra por carrossel.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="per-slide" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;gap:6px;padding:8px;background:#efe4d0;">
+      <img src="./ref-hero.jpg" style="width:60px;height:75px;object-fit:cover;border-radius:4px;">
+      <div style="width:60px;height:75px;background:#e7d1a8;border:1px solid #83ae37;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;color:#2D4A30;">texto</div>
+      <img src="./ref-card2.jpg" style="width:60px;height:75px;object-fit:cover;border-radius:4px;">
+    </div>
+    <div class="card-body">
+      <h3>B — Por slide</h3>
+      <p>Um selector "foto / texto" em cada slide individual. Máxima flexibilidade, mas mais cliques e mais risco de um carrossel inconsistente.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="per-carousel" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;gap:6px;padding:8px;background:#efe4d0;">
+      <img src="./ref-hero.jpg" style="width:60px;height:75px;object-fit:cover;border-radius:4px;">
+      <div style="width:60px;height:75px;background:#e7d1a8;border:1px solid #83ae37;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;color:#2D4A30;">texto</div>
+      <div style="width:60px;height:75px;background:#e7d1a8;border:1px solid #83ae37;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;color:#2D4A30;">texto</div>
+    </div>
+    <div class="card-body">
+      <h3>C — Por carrossel</h3>
+      <p>Uma escolha ao criar o carrossel: "só texto" ou "texto + foto-hero no slide 1". Um meio-termo entre A e B.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">Nota</p>
+  <p>Nenhuma destas opções ainda usa o template visual final (cores/fontes da marca) — isso vem numa próxima pergunta, focada só em estética. Aqui a pergunta é apenas: quem decide o estilo de cada slide, e quando?</p>
+</div>
