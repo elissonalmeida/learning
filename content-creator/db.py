@@ -43,8 +43,22 @@ def init_db(conn):
             estimated_cost_usd REAL NOT NULL,
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS slide_images (
+            id INTEGER PRIMARY KEY,
+            idea_id INTEGER NOT NULL REFERENCES ideas(id),
+            slide_index INTEGER NOT NULL,
+            prompt TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            cost_usd REAL NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL
+        );
         """
     )
+    try:
+        conn.execute("ALTER TABLE ideas ADD COLUMN image_folder TEXT")
+    except sqlite3.OperationalError:
+        pass  # column already exists — idempotent migration for pre-v1.1 databases
     conn.commit()
 
 
@@ -94,9 +108,11 @@ def hard_delete_idea(conn, idea_id):
     idea = get_idea(conn, idea_id)
     if idea is None or idea["archived_at"] is None:
         raise ValueError("Can only hard-delete an idea that has already been archived")
-    # Drafts belong to the idea and go with it; api_calls are a spend audit trail
-    # that must survive the idea being cleaned up, so we only null the link.
+    # Drafts and slide_images belong to the idea and go with it; api_calls are
+    # a spend audit trail that must survive the idea being cleaned up, so we
+    # only null the link.
     conn.execute("DELETE FROM drafts WHERE idea_id = ?", (idea_id,))
+    conn.execute("DELETE FROM slide_images WHERE idea_id = ?", (idea_id,))
     conn.execute("UPDATE api_calls SET idea_id = NULL WHERE idea_id = ?", (idea_id,))
     conn.execute("DELETE FROM ideas WHERE id = ?", (idea_id,))
     conn.commit()
@@ -171,3 +187,46 @@ def get_spend_this_month(conn):
 
 def would_exceed_daily_cap(conn, estimated_call_cost, daily_cap_usd):
     return (get_spend_today(conn) + estimated_call_cost) > daily_cap_usd
+
+
+def create_slide_image(conn, idea_id, slide_index, prompt, file_path, cost_usd):
+    cursor = conn.execute(
+        "INSERT INTO slide_images (idea_id, slide_index, prompt, file_path, cost_usd, status, created_at) "
+        "VALUES (?, ?, ?, ?, ?, 'pending', ?)",
+        (idea_id, slide_index, prompt, file_path, cost_usd, _now()),
+    )
+    conn.commit()
+    return cursor.lastrowid
+
+
+def get_slide_image(conn, slide_image_id):
+    row = conn.execute("SELECT * FROM slide_images WHERE id = ?", (slide_image_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def update_slide_image_status(conn, slide_image_id, status):
+    conn.execute("UPDATE slide_images SET status = ? WHERE id = ?", (status, slide_image_id))
+    conn.commit()
+
+
+def list_slide_images(conn, idea_id):
+    rows = conn.execute(
+        "SELECT * FROM slide_images WHERE idea_id = ? ORDER BY slide_index ASC, created_at ASC",
+        (idea_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_latest_slide_images(conn, idea_id):
+    """Return the most recent slide_images row per slide_index. Regenerating a
+    slide inserts a new row rather than overwriting the old one (same pattern
+    as drafts keeping every round), so this collapses to the current state."""
+    latest = {}
+    for row in list_slide_images(conn, idea_id):
+        latest[row["slide_index"]] = row
+    return [latest[i] for i in sorted(latest)]
+
+
+def set_idea_image_folder(conn, idea_id, image_folder):
+    conn.execute("UPDATE ideas SET image_folder = ? WHERE id = ?", (image_folder, idea_id))
+    conn.commit()
