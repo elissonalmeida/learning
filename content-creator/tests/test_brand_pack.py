@@ -9,6 +9,7 @@ REQUIRED_FILES = [
     "anti-patterns.md",
     "output-examples.md",
     "research-brief.md",
+    "visual-style.md",
 ]
 
 
