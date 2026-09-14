@@ -3,7 +3,9 @@ import streamlit as st
 import ai
 import config
 import db
+import image_gen
 import pipeline
+import storage
 
 st.set_page_config(page_title="Content Creator", layout="wide")
 
@@ -11,6 +13,8 @@ cfg = config.load_config()
 conn = db.get_connection(cfg.db_path)
 db.init_db(conn)
 client = ai.get_client(cfg.api_key)
+gemini_client = image_gen.get_client(cfg.gemini_api_key)
+images_root = storage.images_root(cfg.db_path)
 
 TONES = ai.load_tone_names(cfg.brand_pack)
 
@@ -58,7 +62,7 @@ def run_with_progress(fn, *args, **kwargs):
 
 st.title(f"Content Creator — {cfg.brand_pack}")
 
-tab_new, tab_library = st.tabs(["Nova Ideia", "Biblioteca"])
+tab_new, tab_images, tab_library = st.tabs(["Nova Ideia", "Gerar Imagens", "Biblioteca"])
 
 with tab_new:
     st.subheader("1. Fonte")
@@ -154,6 +158,85 @@ with tab_new:
         if col2.button("Rejeitar"):
             db.update_idea_status(conn, idea["id"], "rejected")
             del st.session_state["current_result"]
+
+with tab_images:
+    st.subheader("Gerar Imagens do Carrossel")
+    approved = db.list_ideas(conn, brand_pack=cfg.brand_pack, status="approved")
+    if not approved:
+        st.info("Sem ideias aprovadas. Aprova um rascunho na aba 'Nova Ideia' primeiro.")
+    else:
+        options = {f"#{i['id']} — {i['topic']}": i for i in approved}
+        chosen_label = st.selectbox("Ideia", list(options.keys()), key="img_idea_select")
+        idea = db.get_idea(conn, options[chosen_label]["id"])
+        latest_draft = db.list_drafts_for_idea(conn, idea["id"])[-1]
+        slides = latest_draft["slides"]
+        existing_images = {img["slide_index"]: img for img in db.get_latest_slide_images(conn, idea["id"])}
+
+        for i, slide_text in enumerate(slides):
+            role = "hero" if i == 0 else "card"
+            st.markdown(f"**Slide {i + 1}** ({'capa' if role == 'hero' else 'cartão'})")
+            existing = existing_images.get(i)
+
+            if existing:
+                st.image(existing["file_path"], width=300)
+                if existing["status"] == "approved":
+                    st.success("Aprovado")
+                col1, col2 = st.columns(2)
+                if existing["status"] != "approved" and col1.button("Aprovar", key=f"approve_{i}"):
+                    pipeline.approve_slide_image(conn, existing["id"])
+                    pipeline.maybe_mark_images_ready(conn, idea["id"], len(slides))
+                    st.rerun()
+                if col2.button("Gerar novamente", key=f"regen_{i}"):
+                    st.session_state[f"show_prompt_{i}"] = True
+
+            if not existing or st.session_state.get(f"show_prompt_{i}"):
+                prompt_key = f"prompt_{i}"
+                if prompt_key not in st.session_state:
+                    st.session_state[prompt_key] = image_gen.build_image_prompt(slide_text, cfg.brand_pack, role)
+                st.session_state[prompt_key] = st.text_area(
+                    "Prompt da imagem (podes editar)", value=st.session_state[prompt_key], key=f"prompt_area_{i}",
+                )
+                if st.button("Gerar imagem", key=f"generate_{i}"):
+                    try:
+                        run_with_progress(
+                            lambda on_step: pipeline.generate_slide_image(
+                                gemini_client, conn, idea, i, role, slide_text,
+                                st.session_state[prompt_key], images_root, cfg.max_daily_spend_usd,
+                                on_step=on_step,
+                            ),
+                        )
+                    except pipeline.DailyBudgetExceededError as e:
+                        st.error(str(e))
+                    else:
+                        st.session_state[f"show_prompt_{i}"] = False
+                        st.rerun()
+
+        st.divider()
+        st.subheader("Pré-visualização do Carrossel")
+        latest = db.get_latest_slide_images(conn, idea["id"])
+        approved_images = [img for img in latest if img["status"] == "approved"]
+        if len(approved_images) == len(slides):
+            preview_key = "carousel_preview_index"
+            if preview_key not in st.session_state:
+                st.session_state[preview_key] = 0
+            idx = st.session_state[preview_key]
+            st.image(approved_images[idx]["file_path"], width=400)
+            st.caption(slides[idx])
+            col_prev, col_next = st.columns(2)
+            if col_prev.button("◀ Anterior") and idx > 0:
+                st.session_state[preview_key] -= 1
+                st.rerun()
+            if col_next.button("Seguinte ▶") and idx < len(slides) - 1:
+                st.session_state[preview_key] += 1
+                st.rerun()
+            thumb_cols = st.columns(len(slides))
+            for j, col in enumerate(thumb_cols):
+                if col.button(f"{j + 1}", key=f"thumb_{j}"):
+                    st.session_state[preview_key] = j
+                    st.rerun()
+            st.write(f"**Legenda:** {latest_draft['caption']}")
+        else:
+            st.info("Aprova todas as imagens para veres a pré-visualização do carrossel.")
 
 with tab_library:
     st.subheader("Biblioteca")
