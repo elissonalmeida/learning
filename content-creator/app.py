@@ -187,14 +187,15 @@ with tab_images:
                     pipeline.maybe_mark_images_ready(conn, idea["id"], len(slides))
                     st.rerun()
                 if col2.button("Gerar novamente", key=f"regen_{i}"):
-                    st.session_state[f"show_prompt_{i}"] = True
+                    st.session_state[f"show_prompt_{idea['id']}_{i}"] = True
 
-            if not existing or st.session_state.get(f"show_prompt_{i}"):
-                prompt_key = f"prompt_{i}"
+            if not existing or st.session_state.get(f"show_prompt_{idea['id']}_{i}"):
+                prompt_key = f"prompt_{idea['id']}_{i}"
                 if prompt_key not in st.session_state:
                     st.session_state[prompt_key] = image_gen.build_image_prompt(slide_text, cfg.brand_pack, role)
                 st.session_state[prompt_key] = st.text_area(
-                    "Prompt da imagem (podes editar)", value=st.session_state[prompt_key], key=f"prompt_area_{i}",
+                    "Prompt da imagem (podes editar)", value=st.session_state[prompt_key],
+                    key=f"prompt_area_{idea['id']}_{i}",
                 )
                 if st.button("Gerar imagem", key=f"generate_{i}"):
                     try:
@@ -208,7 +209,7 @@ with tab_images:
                     except pipeline.DailyBudgetExceededError as e:
                         st.error(str(e))
                     else:
-                        st.session_state[f"show_prompt_{i}"] = False
+                        st.session_state[f"show_prompt_{idea['id']}_{i}"] = False
                         st.rerun()
 
         st.divider()
@@ -216,7 +217,7 @@ with tab_images:
         latest = db.get_latest_slide_images(conn, idea["id"])
         approved_images = [img for img in latest if img["status"] == "approved"]
         if len(approved_images) == len(slides):
-            preview_key = "carousel_preview_index"
+            preview_key = f"carousel_preview_index_{idea['id']}"
             if preview_key not in st.session_state:
                 st.session_state[preview_key] = 0
             idx = st.session_state[preview_key]
