@@ -5,9 +5,14 @@ def test_raises_when_api_key_missing():
     with pytest.raises(ConfigError):
         load_config(env={})
 
-def test_applies_defaults_when_only_api_key_set():
-    cfg = load_config(env={"ANTHROPIC_API_KEY": "sk-test"})
+def test_raises_when_gemini_api_key_missing():
+    with pytest.raises(ConfigError):
+        load_config(env={"ANTHROPIC_API_KEY": "sk-test"})
+
+def test_applies_defaults_when_only_required_keys_set():
+    cfg = load_config(env={"ANTHROPIC_API_KEY": "sk-test", "GEMINI_API_KEY": "gk-test"})
     assert cfg.api_key == "sk-test"
+    assert cfg.gemini_api_key == "gk-test"
     assert cfg.db_path == DEFAULT_DB_PATH
     assert cfg.max_daily_spend_usd == DEFAULT_MAX_DAILY_SPEND_USD
     assert cfg.brand_pack == DEFAULT_BRAND_PACK
@@ -15,6 +20,7 @@ def test_applies_defaults_when_only_api_key_set():
 def test_overrides_are_respected():
     cfg = load_config(env={
         "ANTHROPIC_API_KEY": "sk-test",
+        "GEMINI_API_KEY": "gk-test",
         "DB_PATH": "C:\\custom\\path.db",
         "MAX_DAILY_SPEND_USD": "5.5",
         "BRAND_PACK": "other-brand",
