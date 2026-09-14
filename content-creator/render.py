@@ -1,4 +1,5 @@
 import base64
+import html
 import re
 from pathlib import Path
 
@@ -17,6 +18,13 @@ MIN_FONT_PX = {"hero_title": 58, "heading": 43, "body": 34, "caption": 24}
 MIN_CONTRAST = {"hero_title": 3.0, "heading": 4.5, "body": 4.5, "caption": 4.5}
 
 _PALETTE_LINE_RE = re.compile(r"\*\*(.+?):\*\*\s*`(#[0-9A-Fa-f]{6})`")
+
+FONT_LINK = (
+    '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+    '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600'
+    '&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">'
+)
 
 
 class LowContrastError(Exception):
@@ -64,30 +72,34 @@ def build_slide_html(slide_text, image_bytes, brand_pack, slide_role):
     frame = palette["Moldura/estrutura"]
     text_color = "#2C1A0E"
     image_b64 = base64.b64encode(image_bytes).decode()
+    escaped_text = html.escape(slide_text)
 
     if slide_role == "hero":
         title_px = _base_font_px("hero_title")
         return (
-            f"<html><body style=\"margin:0;width:{BASE_WIDTH}px;height:{BASE_HEIGHT}px;"
+            f"<html><head>{FONT_LINK}</head>"
+            f"<body style=\"margin:0;width:{BASE_WIDTH}px;height:{BASE_HEIGHT}px;"
             f"background-image:url(data:image/png;base64,{image_b64});"
             "background-size:cover;background-position:center;"
             "font-family:'DM Sans',sans-serif;position:relative;\">"
-            f"<div style=\"position:absolute;bottom:24px;left:24px;right:24px;"
+            f"<div style=\"position:absolute;top:24px;bottom:24px;left:24px;right:24px;"
+            "display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;"
             "color:#fff;font-family:'Cormorant Garamond',serif;"
             f"font-size:{title_px}px;text-shadow:0 2px 6px rgba(0,0,0,0.6);\">"
-            f"{slide_text}</div></body></html>"
+            f"{escaped_text}</div></body></html>"
         )
 
     check_contrast("body", text_color, background)
     body_px = _base_font_px("body")
     return (
-        f"<html><body style=\"margin:0;width:{BASE_WIDTH}px;height:{BASE_HEIGHT}px;"
+        f"<html><head>{FONT_LINK}</head>"
+        f"<body style=\"margin:0;width:{BASE_WIDTH}px;height:{BASE_HEIGHT}px;"
         f"background:{background};border:6px solid {frame};box-sizing:border-box;"
         "font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;\">"
         f"<div style=\"height:55%;background-image:url(data:image/png;base64,{image_b64});"
         "background-size:cover;background-position:center;\"></div>"
-        f"<div style=\"flex:1;padding:16px;color:{text_color};"
-        f"font-size:{body_px}px;line-height:1.4;\">{slide_text}</div></body></html>"
+        f"<div style=\"flex:1;padding:16px;color:{text_color};overflow:hidden;"
+        f"font-size:{body_px}px;line-height:1.4;\">{escaped_text}</div></body></html>"
     )
 
 
@@ -99,6 +111,7 @@ def render_png(html):
             device_scale_factor=DEVICE_SCALE_FACTOR,
         )
         page.set_content(html)
+        page.evaluate("document.fonts.ready")
         png_bytes = page.screenshot()
         browser.close()
         return png_bytes

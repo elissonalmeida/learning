@@ -5,5 +5,6 @@ if not exist venv (
 )
 call venv\Scripts\activate.bat
 pip install -r requirements.txt --quiet
+python -m playwright install chromium
 streamlit run app.py
 pause

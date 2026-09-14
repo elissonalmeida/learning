@@ -90,12 +90,13 @@ def ensure_image_folder(conn, idea, images_root, storage_module=storage):
     existing one — so regenerating a single slide always lands in the same
     place instead of picking a new folder each time."""
     if idea.get("image_folder"):
-        return idea["image_folder"]
-    date_str = datetime.now(timezone.utc).date().isoformat()
-    folder = storage_module.make_carousel_folder(images_root, idea["topic"], date_str)
+        folder = idea["image_folder"]
+    else:
+        date_str = datetime.now(timezone.utc).date().isoformat()
+        folder = storage_module.make_carousel_folder(images_root, idea["topic"], date_str)
+        db.set_idea_image_folder(conn, idea["id"], folder)
+        idea["image_folder"] = folder
     Path(images_root, folder).mkdir(parents=True, exist_ok=True)
-    db.set_idea_image_folder(conn, idea["id"], folder)
-    idea["image_folder"] = folder
     return folder
 
 

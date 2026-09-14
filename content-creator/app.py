@@ -23,6 +23,8 @@ STEP_LABELS = {
     "generate_draft": "A gerar o rascunho",
     "critique_draft": "A rever a qualidade",
     "revise_draft": "A corrigir problemas encontrados",
+    "generate_image": "A gerar a imagem",
+    "render_image": "A compor o slide",
 }
 
 
@@ -161,7 +163,10 @@ with tab_new:
 
 with tab_images:
     st.subheader("Gerar Imagens do Carrossel")
-    approved = db.list_ideas(conn, brand_pack=cfg.brand_pack, status="approved")
+    approved = (
+        db.list_ideas(conn, brand_pack=cfg.brand_pack, status="approved")
+        + db.list_ideas(conn, brand_pack=cfg.brand_pack, status="images_ready")
+    )
     if not approved:
         st.info("Sem ideias aprovadas. Aprova um rascunho na aba 'Nova Ideia' primeiro.")
     else:
