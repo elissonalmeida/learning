@@ -64,3 +64,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ## 5. Subagent / SDD Reporting
 
 When a task-level or final whole-branch review (subagent-driven-development or similar multi-subagent workflows) comes back with findings, post the actual findings list — severity, one-line description, file/location — before dispatching any fix wave. Give a short progress update as each finding is addressed, rather than going silent until the whole wave completes and reporting only a count.
+
+## 6. Backup Before Delete
+
+Before removing/dropping any file (`rm`, an overwrite that discards old content, `git clean`, etc.), copy the current content to a backup first — never delete-then-ask. Use a timestamped copy (`<name>.bak-YYYYMMDD-HHMMSS`) or a local `backups/` folder if one exists. Applies even to files created earlier in the same session. Exception: `git rm`/branch cleanup of content already committed to git history doesn't need a separate backup — git is the backup.
