@@ -60,3 +60,7 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. Subagent / SDD Reporting
+
+When a task-level or final whole-branch review (subagent-driven-development or similar multi-subagent workflows) comes back with findings, post the actual findings list — severity, one-line description, file/location — before dispatching any fix wave. Give a short progress update as each finding is addressed, rather than going silent until the whole wave completes and reporting only a count.
