@@ -128,7 +128,11 @@ from AURA v4 worth carrying into the new project's data model:
 - Niche-specific trend/event calendar overlay (e.g. moon phases,
   holidays, seasonal moments) as a content-idea generator.
 - Post status pipeline (e.g. Pending → In Production → Ready →
-  Published).
+  Published) — content-creator already has a working version of this
+  (`idea → reviewed → approved/rejected → images_ready → archived` in
+  `db.py`); this item is about reconciling/extending it (e.g. adding a
+  `Published` state once auto-publish (#9) exists), not building one
+  from scratch.
 - Export-everything-to-Markdown pattern (single post / full month / whole
   brand context) — same shape as AURA v4's "Claude Project" export
   (`perfil.md`, `servicos.md`, `estrategia.md`, `instrucoes.md`).
@@ -237,6 +241,13 @@ per-platform login sessions; video content is transcribed via
 per profile, consolidated across multiple profiles into one synthesized
 framework (hook/CTA templates, anti-patterns).
 
+**Note:** content-creator already depends on Playwright (`render.py`
+uses it to screenshot HTML slides into PNGs), so the core
+browser-automation dependency is already proven to work in this exact
+environment — lowering this item's risk somewhat. Persisted-login
+profile scraping is still a different usage mode (interactive session
+state vs. static content rendering) and would need its own evaluation.
+
 **Why it matters for content-creator:** This maps directly onto pieces
 content-creator already has per-brand (`anti-patterns.md`,
 `quality-criteria.md`, `tone-of-voice.md`, `output-examples.md` per the
@@ -298,6 +309,13 @@ Researcher → Copywriter → Image Designer → Reviewer → Publisher desks,
 paused mid-pipeline, no actual agent files built yet). Speculative/low
 -confidence signal — worth remembering as an idea, not a validated pattern,
 since that squad was never actually built out.
+
+**Note:** technically smaller than it sounds — content-creator already
+has a "Texto de referência" mode that feeds arbitrary pasted text into
+`extract_topics` (see `app.py`); this item would mainly need a
+fetch-URL-and-extract-text step in front of that existing flow, not a
+new pipeline. The speculative part is whether the product idea is worth
+building, not whether the plumbing is hard.
 
 ---
 
