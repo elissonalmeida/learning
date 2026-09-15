@@ -16,7 +16,8 @@ def build_issue_body(task, plan_path, depends_text):
     return (
         f"{task.body}\n\n"
         f"_From plan: `{plan_path}`_\n\n"
-        f"Depends on: {depends_text}"
+        f"Depends on: {depends_text}\n"
+        f"<!-- depends-on: {depends_text} -->"
     )
 
 

@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import plan_parser
@@ -69,3 +71,45 @@ def test_parse_plan_includes_full_task_body():
     tasks = plan_parser.parse_plan(SAMPLE_PLAN)
     assert "do a thing" in tasks[0].body
     assert "do another thing" not in tasks[0].body
+
+
+PLAN_WITH_FENCED_EXAMPLE = """
+### Task 1: Real task
+
+**Interfaces:**
+- Consumes: none
+- Produces: `foo.bar(x) -> int`
+
+Example of how a plan task looks:
+
+```
+### Task 1: fake
+**Interfaces:**
+- Consumes: none
+```
+
+- [ ] Step 1: do the real thing
+"""
+
+
+def test_parse_plan_ignores_task_headers_inside_fenced_code_blocks():
+    tasks = plan_parser.parse_plan(PLAN_WITH_FENCED_EXAMPLE)
+    assert len(tasks) == 1
+    assert tasks[0].name == "Real task"
+    # The fenced example text is still part of the body (only header
+    # matching ignores fences, not body content).
+    assert "### Task 1: fake" in tasks[0].body
+
+
+def test_parse_plan_raises_on_duplicate_task_numbers():
+    plan_with_dupes = """
+### Task 1: First
+
+- Consumes: none
+
+### Task 1: Duplicate number
+
+- Consumes: none
+"""
+    with pytest.raises(ValueError):
+        plan_parser.parse_plan(plan_with_dupes)

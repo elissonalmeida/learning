@@ -11,7 +11,7 @@ def run_gh(args, input_text=None):
     return result.stdout
 
 
-_DEPENDS_RE = re.compile(r"Depends on:\s*(.+)")
+_DEPENDS_RE = re.compile(r"<!-- depends-on:\s*(.+?)\s*-->")
 _ISSUE_REF_RE = re.compile(r"#(\d+)")
 
 
@@ -22,12 +22,37 @@ def parse_depends_on(body):
     return [int(n) for n in _ISSUE_REF_RE.findall(m.group(1))]
 
 
-def list_pending_issues(repo, gh_runner=run_gh):
+CLAIMABLE_LABELS = ("status:pending", "status:blocked")
+
+
+class TicketNotAvailable(Exception):
+    """Raised when a ticket is no longer pending/blocked (already claimed or done)."""
+
+
+def list_issues_by_label(repo, label, gh_runner=run_gh):
     out = gh_runner([
-        "issue", "list", "--repo", repo, "--label", "status:pending",
+        "issue", "list", "--repo", repo, "--label", label,
         "--json", "number,title,body", "--state", "open",
     ])
     return json.loads(out)
+
+
+def list_pending_issues(repo, gh_runner=run_gh):
+    return list_issues_by_label(repo, "status:pending", gh_runner=gh_runner)
+
+
+def list_pending_and_blocked_issues(repo, gh_runner=run_gh):
+    """gh issue list combines multiple --label flags with AND, not OR, so
+    querying pending-or-blocked takes two calls, combined and de-duplicated
+    by issue number."""
+    combined = []
+    seen = set()
+    for label in CLAIMABLE_LABELS:
+        for issue in list_issues_by_label(repo, label, gh_runner=gh_runner):
+            if issue["number"] not in seen:
+                combined.append(issue)
+                seen.add(issue["number"])
+    return combined
 
 
 def get_issue_labels(repo, issue_number, gh_runner=run_gh):
@@ -44,14 +69,28 @@ def is_unblocked(issue, repo, gh_runner=run_gh):
 
 
 def list_unblocked_pending(repo, gh_runner=run_gh):
-    pending = list_pending_issues(repo, gh_runner=gh_runner)
-    return [issue for issue in pending if is_unblocked(issue, repo, gh_runner=gh_runner)]
+    """Every status:pending or status:blocked issue whose dependencies are
+    all status:done. status:blocked is included because nothing else ever
+    relabels a blocked ticket back to pending once its dependency merges —
+    this dependency check is the only thing that unblocks it."""
+    candidates = list_pending_and_blocked_issues(repo, gh_runner=gh_runner)
+    return [issue for issue in candidates if is_unblocked(issue, repo, gh_runner=gh_runner)]
 
 
 def claim_ticket(repo, issue_number, claimant_note, gh_runner=run_gh):
+    """Re-checks the issue is still pending/blocked (not already claimed or
+    done) immediately before claiming, per the spec's race mitigation, then
+    removes whichever status label is actually present."""
+    labels = get_issue_labels(repo, issue_number, gh_runner=gh_runner)
+    current_status = next((label for label in CLAIMABLE_LABELS if label in labels), None)
+    if current_status is None:
+        raise TicketNotAvailable(
+            f"Issue #{issue_number} is no longer available (already claimed or done)"
+        )
+
     gh_runner([
         "issue", "edit", str(issue_number), "--repo", repo,
-        "--remove-label", "status:pending", "--add-label", "status:in-progress",
+        "--remove-label", current_status, "--add-label", "status:in-progress",
     ])
     gh_runner([
         "issue", "comment", str(issue_number), "--repo", repo,
@@ -67,7 +106,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.claim:
-        claim_ticket(args.repo, args.claim, args.note)
+        try:
+            claim_ticket(args.repo, args.claim, args.note)
+        except TicketNotAvailable as exc:
+            print(str(exc))
+            return
         print(f"Claimed issue #{args.claim}")
         return
 

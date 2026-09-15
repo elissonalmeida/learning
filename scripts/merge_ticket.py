@@ -1,4 +1,5 @@
 import argparse
+import shlex
 import subprocess
 
 
@@ -19,7 +20,27 @@ def run_test_suite(project_dir, test_command, shell_runner=run_shell):
     return returncode == 0, stdout + stderr
 
 
+def current_branch(project_dir, shell_runner=run_shell):
+    _, stdout, _ = shell_runner(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=project_dir)
+    return stdout.strip()
+
+
+def rollback_merge(project_dir, shell_runner=run_shell):
+    """Undo a completed `git merge --no-edit`. `git merge --abort` only
+    works while a merge is still in progress (conflicted); --no-edit
+    completes non-interactively, so by the time we'd call this the merge
+    has already landed and --abort fails with "no merge to abort". Reset
+    to ORIG_HEAD (set by `git merge` to the pre-merge commit) instead."""
+    shell_runner(["git", "reset", "--hard", "ORIG_HEAD"], cwd=project_dir)
+
+
 def merge_branch(project_dir, feature_branch, ticket_branch, shell_runner=run_shell):
+    branch = current_branch(project_dir, shell_runner=shell_runner)
+    if branch != feature_branch:
+        return False, (
+            f"Current branch is '{branch}', expected feature branch "
+            f"'{feature_branch}'. Check out the feature branch before merging."
+        )
     returncode, stdout, stderr = shell_runner(
         ["git", "merge", "--no-edit", ticket_branch], cwd=project_dir,
     )
@@ -42,18 +63,28 @@ def merge_ticket(
     project_dir, repo, issue_number, feature_branch, ticket_branch, test_command,
     commit_range, gh_runner=run_gh, shell_runner=run_shell,
 ):
-    """Run the full test suite, then merge the ticket branch, then mark the
-    issue done. Returns (success, message). Never touches the issue or
-    merges if the test suite fails first."""
-    tests_ok, test_output = run_test_suite(project_dir, test_command, shell_runner=shell_runner)
-    if not tests_ok:
-        return False, f"Test suite failed, merge aborted:\n{test_output}"
-
+    """Merge the ticket branch first, then run the full test suite against
+    the now-merged tree — this is the only ordering that can actually catch
+    a real interface-drift regression between the ticket and the feature
+    branch. If tests fail post-merge, roll back and never touch the issue.
+    Returns (success, message)."""
     merged_ok, merge_output = merge_branch(project_dir, feature_branch, ticket_branch, shell_runner=shell_runner)
     if not merged_ok:
         return False, f"Merge failed:\n{merge_output}"
 
-    mark_done(repo, issue_number, commit_range, gh_runner=gh_runner)
+    tests_ok, test_output = run_test_suite(project_dir, test_command, shell_runner=shell_runner)
+    if not tests_ok:
+        rollback_merge(project_dir, shell_runner=shell_runner)
+        return False, f"Test suite failed after merge, rolled back:\n{test_output}"
+
+    try:
+        mark_done(repo, issue_number, commit_range, gh_runner=gh_runner)
+    except subprocess.CalledProcessError as exc:
+        error_detail = exc.stderr or str(exc)
+        return True, (
+            f"Merged successfully, but failed to update issue #{issue_number} "
+            f"— you'll need to relabel it manually. Error: {error_detail}"
+        )
     return True, "Merged and marked done."
 
 
@@ -70,7 +101,7 @@ def main(argv=None):
 
     ok, message = merge_ticket(
         args.project_dir, args.repo, args.issue, args.feature_branch,
-        args.ticket_branch, args.test_command.split(), args.commit_range,
+        args.ticket_branch, shlex.split(args.test_command), args.commit_range,
     )
     print(message)
     if not ok:

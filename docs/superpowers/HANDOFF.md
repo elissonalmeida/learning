@@ -21,6 +21,21 @@ built, the next real feature work is picked from
 functionality" vision into its own sub-project specs (calendar first, per
 the backlog's own note).
 
+## One-time setup per repo
+
+Before generating tickets in a target repo for the first time, create the
+five status labels the workflow relies on (only needed once per repo —
+`gh issue create`/`gh issue edit` fail with a raw traceback if a label
+doesn't exist yet):
+
+```
+gh label create status:pending --repo <owner/repo> --color ededed
+gh label create status:blocked --repo <owner/repo> --color d93f0b
+gh label create status:in-progress --repo <owner/repo> --color fbca04
+gh label create status:review --repo <owner/repo> --color 0e8a16
+gh label create status:done --repo <owner/repo> --color 5319e7
+```
+
 ## How to resume
 
 1. Read this file.
@@ -31,11 +46,19 @@ the backlog's own note).
    `superpowers:brainstorming` first — do not start writing code.
 4. To generate tickets from an approved plan: `python3 scripts/generate_tickets.py <plan-path> --repo <owner/repo>`.
 5. To pick up one ticket: `python3 scripts/pick_ticket.py --repo <owner/repo>` to see unblocked
-   options, then `--claim <issue-number>` to claim exactly one. Work that one
-   ticket via `superpowers:subagent-driven-development`, then stop — do not
-   claim another ticket in the same invocation. Starting the next one is
-   always a separate, deliberate action.
-6. To merge a finished ticket back: `python3 scripts/merge_ticket.py <project-dir> --repo <owner/repo> --issue <n> --feature-branch <name> --ticket-branch <name> --test-command "<command>" --commit-range <a..b>`.
+   options, then `python3 scripts/pick_ticket.py --repo <owner/repo> --claim <issue-number>` to
+   claim exactly one. Work that one ticket via
+   `superpowers:subagent-driven-development`, then stop — do not claim
+   another ticket in the same invocation. Starting the next one is always a
+   separate, deliberate action.
+6. Before starting work on the claimed ticket, create its isolated
+   worktree/branch via `superpowers:using-git-worktrees`, off the plan's
+   feature branch. Convention: name the branch (and worktree) after the
+   issue number, e.g. `ticket-<issue-number>`.
+7. To merge a finished ticket back: `python3 scripts/merge_ticket.py <project-dir> --repo <owner/repo> --issue <n> --feature-branch <name> --ticket-branch <name> --test-command "<command>" --commit-range <a..b>`.
+8. Before stopping work, update this file (`docs/superpowers/HANDOFF.md`) to
+   reflect what's now done and what's next — it is read first by the next
+   thread and must stay current.
 
 ## Standing conventions a new thread needs
 

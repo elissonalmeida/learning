@@ -73,6 +73,7 @@ def test_second_pass_resolves_real_issue_numbers_in_depends_on():
     task2_edit = edit_calls[1]
     body = task2_edit[task2_edit.index("--body") + 1]
     assert f"Depends on: #{issue_numbers[1]}" in body
+    assert f"<!-- depends-on: #{issue_numbers[1]} -->" in body
 
 
 def test_task_with_no_dependencies_gets_depends_on_none():
@@ -83,6 +84,7 @@ def test_task_with_no_dependencies_gets_depends_on_none():
     task1_edit = edit_calls[0]
     body = task1_edit[task1_edit.index("--body") + 1]
     assert "Depends on: None" in body
+    assert "<!-- depends-on: None -->" in body
 
 
 def test_extract_issue_number_parses_url():
