@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 import tempfile
 import urllib.parse
@@ -9,7 +10,7 @@ from sherlock.models import GatherResult, NeedsUpload, detect_platform, instagra
 
 MAX_CHARS = 20000
 MIN_CHARS = 200
-MAX_FETCH = 2_000_000  # bytes read from the socket, then also the max chars kept
+MAX_FETCH = 2_000_000  # max bytes read from a socket/response; also max chars of website html kept
 WEBSITE_FAIL_REASON = "Não consegui abrir esta página neste momento."
 
 
@@ -129,6 +130,9 @@ _DISCOVERY_FIELDS = (
     "{{followers_count,media_count,media{{caption,like_count,comments_count,media_type,timestamp,permalink}}}}"
 )
 DISCOVERY_FAIL_REASON = "Não consegui ler este perfil pelo Instagram neste momento."
+DISCOVERY_BAD_USERNAME_REASON = "Este nome de utilizador do Instagram não parece válido."
+DISCOVERY_EMPTY_REASON = "Este perfil quase não tem publicações legíveis."
+_USERNAME_RE = re.compile(r"^[A-Za-z0-9._]{1,30}$")
 
 
 def _http_get_json(url, timeout=20):
@@ -144,6 +148,8 @@ def gather_instagram_discovery(source, ig_user_id, access_token, get_json=_http_
             "A ligação opcional ao Instagram (Business Discovery) não está configurada.",
             upload_instructions("instagram"),
         )
+    if not _USERNAME_RE.match(username):
+        return NeedsUpload(source, DISCOVERY_BAD_USERNAME_REASON, upload_instructions("instagram"))
     fields = _DISCOVERY_FIELDS.format(username=username)
     url = (
         f"https://graph.facebook.com/{GRAPH_VERSION}/{urllib.parse.quote(ig_user_id, safe='')}"
@@ -158,15 +164,23 @@ def gather_instagram_discovery(source, ig_user_id, access_token, get_json=_http_
             f"Seguidores: {_num(data.get('followers_count'))}  Publicações: {_num(data.get('media_count'))}",
         ]
         for post in media:
-            lines.append(
-                f"- [{post.get('media_type') or ''}] {(post.get('timestamp') or '')[:10]} "
-                f"gostos={_num(post.get('like_count'))} comentários={_num(post.get('comments_count'))}: "
-                f"{post.get('caption') or ''}"
-            )
+            if isinstance(post, dict):
+                lines.append(
+                    f"- [{_str(post.get('media_type'))}] {_str(post.get('timestamp'))[:10]} "
+                    f"gostos={_num(post.get('like_count'))} comentários={_num(post.get('comments_count'))}: "
+                    f"{_str(post.get('caption'))}"
+                )
     except Exception:  # API/network errors or unexpected shapes: ask for an upload instead
         return NeedsUpload(source, DISCOVERY_FAIL_REASON, upload_instructions("instagram"))
-    return GatherResult(source, "instagram-business-discovery", "\n".join(lines)[:MAX_CHARS])
+    text = "\n".join(lines)[:MAX_CHARS]
+    if len(text) < MIN_CHARS:
+        return NeedsUpload(source, DISCOVERY_EMPTY_REASON, upload_instructions("instagram"))
+    return GatherResult(source, "instagram-business-discovery", text)
 
 
 def _num(value):
     return "?" if value is None else value
+
+
+def _str(value):
+    return value if isinstance(value, str) else ""
