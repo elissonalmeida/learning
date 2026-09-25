@@ -34,9 +34,14 @@ def test_images_root_is_sibling_of_db_file():
 
 def test_make_carousel_folder_caps_long_topics(tmp_path):
     name = storage.make_carousel_folder(tmp_path, "palavra " * 60, "2026-09-25")
-    assert len(name) <= 70
-    assert not name.endswith("-")
+    assert len(name) <= storage.MAX_FOLDER_LEN
     assert name.startswith("2026-09-25_palavra-palavra")
+
+
+def test_make_carousel_folder_strips_dash_left_by_truncation(tmp_path):
+    topic = "a" * (storage.MAX_SLUG_LEN - 1) + " bbb"  # the cut lands right after the separator dash
+    name = storage.make_carousel_folder(tmp_path, topic, "2026-09-25")
+    assert name == "2026-09-25_" + "a" * (storage.MAX_SLUG_LEN - 1)
 
 
 def test_is_valid_folder_name_rejects_overlong_legacy_names():

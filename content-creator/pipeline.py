@@ -91,7 +91,7 @@ def ensure_image_folder(conn, idea, images_root, storage_module=storage):
     place instead of picking a new folder each time."""
     saved = idea.get("image_folder")
     if saved and (storage_module.is_valid_folder_name(saved) or Path(images_root, saved).is_dir()):
-        folder = idea["image_folder"]
+        folder = saved
     else:
         date_str = datetime.now(timezone.utc).date().isoformat()
         folder = storage_module.make_carousel_folder(images_root, idea["topic"], date_str)
