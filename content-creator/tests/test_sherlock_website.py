@@ -46,10 +46,70 @@ def test_gather_website_returns_needs_upload_on_fetch_error():
 
     result = gather.gather_website("https://exemplo.pt", fetch=boom)
     assert isinstance(result, models.NeedsUpload)
-    assert "bloqueado" in result.reason
+    assert "bloqueado" not in result.reason
+    assert result.reason == gather.WEBSITE_FAIL_REASON
     assert result.instructions
 
 
 def test_gather_website_returns_needs_upload_when_page_has_almost_no_text():
     result = gather.gather_website("https://exemplo.pt", fetch=lambda url: "<html><body>oi</body></html>")
     assert isinstance(result, models.NeedsUpload)
+
+
+def test_detect_platform_uses_hostname_not_substring():
+    assert models.detect_platform("https://x.pt/?u=instagram.com") == "website"
+    assert models.detect_platform("https://x.pt/tiktok.com/youtu.be") == "website"
+    assert models.detect_platform("instagram.com/mariana") == "instagram"
+    assert models.detect_platform("m.youtube.com/watch?v=abc") == "youtube"
+    assert models.detect_platform("https://notinstagram.com/x") == "website"
+
+
+def _long_html():
+    return "<html><body><p>" + ("Texto útil de exemplo. " * 20) + "</p></body></html>"
+
+
+def test_gather_website_prepends_https_when_scheme_missing():
+    seen = []
+
+    def fetch(url):
+        seen.append(url)
+        return _long_html()
+
+    result = gather.gather_website("exemplo.pt/blog", fetch=fetch)
+    assert seen == ["https://exemplo.pt/blog"]
+    assert isinstance(result, models.GatherResult)
+
+
+def test_gather_website_keeps_existing_scheme():
+    seen = []
+    gather.gather_website("http://exemplo.pt", fetch=lambda url: seen.append(url) or _long_html())
+    assert seen == ["http://exemplo.pt"]
+
+
+def test_gather_website_caps_fetched_body(monkeypatch):
+    monkeypatch.setattr(gather, "MAX_FETCH_CHARS", 300)
+    html = "<p>" + ("a " * 200) + "</p><p>" + ("ZZZ " * 1000) + "</p>"
+    result = gather.gather_website("https://exemplo.pt", fetch=lambda url: html)
+    assert isinstance(result, models.GatherResult)
+    assert "ZZZ" not in result.text
+
+
+def test_http_fetch_reads_a_bounded_number_of_bytes(monkeypatch):
+    calls = {}
+
+    class Resp:
+        headers = type("H", (), {"get_content_charset": lambda self: None})()
+
+        def read(self, n=-1):
+            calls["n"] = n
+            return b"ola"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    monkeypatch.setattr(gather.urllib.request, "urlopen", lambda *a, **k: Resp())
+    assert gather._http_fetch("https://exemplo.pt") == "ola"
+    assert calls["n"] == gather.MAX_FETCH_CHARS

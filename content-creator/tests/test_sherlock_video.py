@@ -82,3 +82,48 @@ def test_gather_video_null_fields_do_not_render_none():
     info = {"title": None, "uploader": None, "description": None}
     result = gather.gather_video("https://youtu.be/x", run=fake_run_ok(info))
     assert "None" not in result.text
+
+
+def test_whisper_transcribe_success_path(monkeypatch):
+    import sys
+
+    class FakeModel:
+        def transcribe(self, path):
+            return {"text": "  olá mundo  "}
+
+    fake_whisper = SimpleNamespace(load_model=lambda name: FakeModel())
+    monkeypatch.setitem(sys.modules, "whisper", fake_whisper)
+
+    def run(cmd, **kwargs):
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    assert gather.whisper_transcribe("https://youtu.be/x", run=run) == "olá mundo"
+
+
+def test_whisper_transcribe_returns_none_when_download_fails(monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "whisper", SimpleNamespace(load_model=lambda name: None))
+
+    def run(cmd, **kwargs):
+        return SimpleNamespace(returncode=1, stdout="", stderr="x")
+
+    assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
+
+
+def test_gather_video_treats_raising_transcribe_as_no_transcript():
+    def boom(url):
+        raise RuntimeError("whisper rebentou")
+
+    result = gather.gather_video("https://youtu.be/x", run=fake_run_ok({"title": "T"}), transcribe=boom)
+    assert isinstance(result, models.GatherResult)
+    assert result.method == "yt-dlp"
+    assert "Título: T" in result.text
+
+
+def test_gather_video_truncation_keeps_metadata_and_cuts_transcript():
+    info = {"title": "T", "description": "D", "tags": ["a", "b"]}
+    result = gather.gather_video("https://youtu.be/x", run=fake_run_ok(info), transcribe=lambda url: "x" * 50000)
+    assert len(result.text) <= gather.MAX_CHARS
+    assert result.text.startswith(gather._video_text(info))
+    assert "Transcrição:" in result.text

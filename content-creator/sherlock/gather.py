@@ -8,6 +8,8 @@ from sherlock.models import GatherResult, NeedsUpload, detect_platform, upload_i
 
 MAX_CHARS = 20000
 MIN_CHARS = 200
+MAX_FETCH_CHARS = 2_000_000
+WEBSITE_FAIL_REASON = "Não consegui abrir esta página neste momento."
 
 
 class _TextExtractor(HTMLParser):
@@ -39,14 +41,16 @@ def _http_fetch(url, timeout=20):
     request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; ContentCreator/1.0)"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         charset = response.headers.get_content_charset() or "utf-8"
-        return response.read().decode(charset, errors="replace")
+        return response.read(MAX_FETCH_CHARS).decode(charset, errors="replace")
 
 
 def gather_website(url, fetch=_http_fetch):
+    if "://" not in url:
+        url = "https://" + url.strip()
     try:
-        html = fetch(url)
-    except Exception as e:  # network errors, HTTP errors, timeouts: all mean "ask for an upload"
-        return NeedsUpload(url, str(e), upload_instructions("website"))
+        html = fetch(url)[:MAX_FETCH_CHARS]
+    except Exception:  # network errors, HTTP errors, timeouts: all mean "ask for an upload"
+        return NeedsUpload(url, WEBSITE_FAIL_REASON, upload_instructions("website"))
     parser = _TextExtractor()
     parser.feed(html)
     text = " ".join(parser.parts)[:MAX_CHARS]
@@ -83,10 +87,16 @@ def gather_video(url, run=subprocess.run, transcribe=None):
     except (TypeError, ValueError):
         return NeedsUpload(url, "O yt-dlp não conseguiu ler este vídeo.", upload_instructions(kind))
     method = "yt-dlp"
-    transcript = transcribe(url) if transcribe else None
+    try:
+        transcript = transcribe(url) if transcribe else None
+    except Exception:  # the transcript is a bonus: any failure means "no transcript"
+        transcript = None
     if transcript:
-        text += f"\n\nTranscrição:\n{transcript}"
-        method = "yt-dlp+whisper"
+        header = "\n\nTranscrição:\n"
+        room = MAX_CHARS - len(text) - len(header)
+        if room > 0:
+            text += header + transcript[:room]
+            method = "yt-dlp+whisper"
     return GatherResult(url, method, text[:MAX_CHARS])
 
 

@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 
 @dataclass
@@ -47,14 +48,31 @@ def upload_instructions(kind):
     return _UPLOAD_INSTRUCTIONS.get(kind, _UPLOAD_INSTRUCTIONS["other"])
 
 
+def _hostname(source):
+    if re.search(r"\s", source):
+        return None
+    try:
+        return urlparse(source if "://" in source else "//" + source).hostname
+    except ValueError:
+        return None
+
+
+def _host_is(host, *domains):
+    return any(host == d or host.endswith("." + d) for d in domains)
+
+
 def detect_platform(source):
     s = source.strip().lower()
-    if "instagram.com" in s or (s.startswith("@") and " " not in s):
+    if s.startswith("@") and " " not in s:
         return "instagram"
-    if "tiktok.com" in s:
-        return "tiktok"
-    if "youtube.com" in s or "youtu.be" in s:
-        return "youtube"
+    host = _hostname(s)
+    if host:
+        if _host_is(host, "instagram.com"):
+            return "instagram"
+        if _host_is(host, "tiktok.com"):
+            return "tiktok"
+        if _host_is(host, "youtube.com", "youtu.be"):
+            return "youtube"
     if re.match(r"^(https?://|www\.)\S+$", s):
         return "website"
     return "text"
