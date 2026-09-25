@@ -415,6 +415,40 @@ item. #14 stands alone but pairs with #8 (review passes).
 
 ---
 
+## More low-friction ideas (brainstormed, not yet evaluated)
+
+Same goal as #11–#14: content creation without friction for people it
+doesn't come naturally to. Each is one line of intent, nothing evaluated.
+
+- **#15 Voice-first capture:** talk for ~60 seconds and Aura turns it into
+  topics or a draft. Speaking is easier than writing.
+- **#16 "Nothing to say today" button:** proposes a topic from the
+  calendar, past posts and seasonality, so there's never a blank page.
+  Pairs with #7 (angle ideation). *Suggested early pick.*
+- **#17 Repurpose engine:** one approved post becomes a carousel, Story
+  sequence, caption variants and a Reel script.
+- **#18 Content bank:** saved raw material (client questions, product
+  facts, photos, quotes) that drafts draw from.
+- **#19 Batch day:** one ~30-minute session that fills the week's
+  calendar with drafts queued for approval only. Needs the Calendar (#2).
+  *Suggested early pick.*
+- **#20 Reply assistant:** drafts comment/DM replies in the brand voice.
+  Serves the engagement goal in the north-star vision.
+- **#21 Lead capture:** track keyword-CTA replies as leads (who, which
+  post, stage). Serves the lead-to-client goal; builds on the CTA
+  taxonomy in #5.
+- **#22 Streaks and gentle nudges:** e.g. "5 days in a row", always in the
+  comforting tone (never urgent).
+- **#23 Scheduled publish autopilot:** an approved post publishes at its
+  slot without the user at the desk. Same thing as #9's endpoint.
+- **#24 Weekly review:** short "what worked, what to try next" summary
+  from Windsor data with one suggested change. Needs #1.
+
+**Bundling:** #16 + #19 both need the Calendar and fit the #7 angle step.
+#23 is the same work as #9. #24 belongs with #11 (morning brief).
+
+---
+
 ## Deferred from calendar-cluster spec review
 
 - **Dummy-account crawl for Sherlock** (secondary account with a saved
