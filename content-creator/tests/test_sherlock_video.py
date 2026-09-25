@@ -136,3 +136,4 @@ def test_gather_video_drops_transcript_when_metadata_fills_the_limit(monkeypatch
     assert result.method == "yt-dlp"
     assert "Transcrição:" not in result.text
     assert len(result.text) <= 50
+    assert result.text == gather._video_text(info)[:50]
