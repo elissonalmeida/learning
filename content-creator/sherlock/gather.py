@@ -8,7 +8,7 @@ from sherlock.models import GatherResult, NeedsUpload, detect_platform, upload_i
 
 MAX_CHARS = 20000
 MIN_CHARS = 200
-MAX_FETCH_CHARS = 2_000_000
+MAX_FETCH = 2_000_000  # bytes read from the socket, then also the max chars kept
 WEBSITE_FAIL_REASON = "Não consegui abrir esta página neste momento."
 
 
@@ -41,14 +41,15 @@ def _http_fetch(url, timeout=20):
     request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; ContentCreator/1.0)"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         charset = response.headers.get_content_charset() or "utf-8"
-        return response.read(MAX_FETCH_CHARS).decode(charset, errors="replace")
+        return response.read(MAX_FETCH).decode(charset, errors="replace")
 
 
 def gather_website(url, fetch=_http_fetch):
+    url = url.strip()
     if "://" not in url:
-        url = "https://" + url.strip()
+        url = "https://" + url
     try:
-        html = fetch(url)[:MAX_FETCH_CHARS]
+        html = fetch(url)[:MAX_FETCH]
     except Exception:  # network errors, HTTP errors, timeouts: all mean "ask for an upload"
         return NeedsUpload(url, WEBSITE_FAIL_REASON, upload_instructions("website"))
     parser = _TextExtractor()

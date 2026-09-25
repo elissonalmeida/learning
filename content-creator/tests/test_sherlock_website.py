@@ -87,7 +87,7 @@ def test_gather_website_keeps_existing_scheme():
 
 
 def test_gather_website_caps_fetched_body(monkeypatch):
-    monkeypatch.setattr(gather, "MAX_FETCH_CHARS", 300)
+    monkeypatch.setattr(gather, "MAX_FETCH", 300)
     html = "<p>" + ("a " * 200) + "</p><p>" + ("ZZZ " * 1000) + "</p>"
     result = gather.gather_website("https://exemplo.pt", fetch=lambda url: html)
     assert isinstance(result, models.GatherResult)
@@ -112,4 +112,19 @@ def test_http_fetch_reads_a_bounded_number_of_bytes(monkeypatch):
 
     monkeypatch.setattr(gather.urllib.request, "urlopen", lambda *a, **k: Resp())
     assert gather._http_fetch("https://exemplo.pt") == "ola"
-    assert calls["n"] == gather.MAX_FETCH_CHARS
+    assert calls["n"] == gather.MAX_FETCH
+
+
+def test_gather_website_strips_whitespace_around_url():
+    seen = []
+    def fetch(url):
+        seen.append(url)
+        return "<p>" + "texto " * 100 + "</p>"
+    gather.gather_website("  https://exemplo.pt/x  ", fetch=fetch)
+    gather.gather_website("  www.exemplo.pt  ", fetch=fetch)
+    assert seen == ["https://exemplo.pt/x", "https://www.exemplo.pt"]
+
+
+def test_detect_platform_text_mentioning_instagram_is_plain_text():
+    # Deliberate: only a URL or @handle counts as a source, not prose that mentions a site.
+    assert models.detect_platform("vê instagram.com para exemplos") == "text"

@@ -127,3 +127,12 @@ def test_gather_video_truncation_keeps_metadata_and_cuts_transcript():
     assert len(result.text) <= gather.MAX_CHARS
     assert result.text.startswith(gather._video_text(info))
     assert "Transcrição:" in result.text
+
+
+def test_gather_video_drops_transcript_when_metadata_fills_the_limit(monkeypatch):
+    monkeypatch.setattr(gather, "MAX_CHARS", 50)
+    info = {"title": "T" * 100, "description": "D"}
+    result = gather.gather_video("https://youtu.be/x", run=fake_run_ok(info), transcribe=lambda url: "transcrição")
+    assert result.method == "yt-dlp"
+    assert "Transcrição:" not in result.text
+    assert len(result.text) <= 50
