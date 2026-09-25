@@ -6,8 +6,10 @@ import db
 import image_gen
 import pipeline
 import storage
+import theme
 
 st.set_page_config(page_title="Content Creator", layout="wide")
+theme.inject_theme()
 
 cfg = config.load_config()
 conn = db.get_connection(cfg.db_path)
@@ -62,7 +64,7 @@ def run_with_progress(fn, *args, **kwargs):
             status.update(label="Concluído", state="complete")
             return result
 
-st.title(f"Content Creator — {cfg.brand_pack}")
+theme.render_header(f"Content Creator — {cfg.brand_pack}")
 
 tab_new, tab_images, tab_library = st.tabs(["Nova Ideia", "Gerar Imagens", "Biblioteca"])
 

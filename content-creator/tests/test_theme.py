@@ -52,3 +52,23 @@ def test_render_header_includes_title_text_and_class():
     html = mock_st.markdown.call_args[0][0]
     assert "app-header-title" in html
     assert "Content Creator — marianabotelho-ig" in html
+from pathlib import Path
+
+from streamlit.testing.v1 import AppTest
+
+APP_PATH = str(Path(__file__).parent.parent / "app.py")
+
+
+def test_app_renders_custom_header_instead_of_default_title(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "test.db"))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+
+    assert not at.exception
+    assert not at.title
+    header_blocks = [el.value for el in at.markdown if "app-header-title" in el.value]
+    assert any("Content Creator" in block for block in header_blocks)
