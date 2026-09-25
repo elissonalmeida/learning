@@ -12,9 +12,10 @@ project) for history.
 - **Parallel ticket workflow**: built; `status:*` labels exist on
   `elissonalmeida/learning`.
 - **All planned work is broken into GitHub tickets** (labels `status:*`).
-  Only #13 (look-and-feel Task 1, global theme) is implemented so far: it is
-  merged into `look-and-feel` and `status:done`. Everything else is still
-  specs, plans and tickets:
+  Implemented so far: #13 (look-and-feel, global theme, merged into
+  `look-and-feel`) and #16 (strategy-coach, tone guard, merged into
+  `strategy-coach`), both `status:done`. Everything else is still specs,
+  plans and tickets:
 
   | Plan (`content-creator/docs/superpowers/plans/`) | Feature branch | Tickets |
   |---|---|---|
@@ -30,7 +31,7 @@ project) for history.
 
 ## What's next
 
-- Unblocked right now: #14, #15 (look-and-feel), #16, #17, #18 (strategy-coach),
+- Unblocked right now: #14, #15 (look-and-feel), #17, #18, #23 (strategy-coach),
   #26, #27 (content-calendar), #33 (calendar-post-link), #37, #38, #40
   (windsor-results). Run `pick_ticket.py` for the live list.
 - The ticket scripts (`scripts/`) must be identical on `main` and every feature
