@@ -9,8 +9,8 @@ GENTLE_TONE_RULE = (
 
 HARSH_WORDS = (
     "crítico", "crítica", "críticos", "críticas", "urgente", "urgentes", "urgência",
-    "alerta", "falhaste", "erro teu", "erro seu", "desleixo", "desleixado", "desleixada",
-    "atrasado", "atrasada", "grave", "inaceitável",
+    "falhaste", "erro teu", "erro seu", "desleixo", "desleixado", "desleixada",
+    "atrasado", "atrasada", "inaceitável",
 )
 
 _HARSH_RE = re.compile(

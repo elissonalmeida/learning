@@ -76,7 +76,8 @@ def _strategy_row(row):
     if row is None:
         return None
     data = dict(row)
-    data["profile"] = json.loads(data.pop("profile_json")) if data.get("profile_json") else None
+    data["profile"] = json.loads(data["profile_json"]) if data["profile_json"] is not None else None
+    del data["profile_json"]
     return data
 
 
@@ -123,6 +124,8 @@ def get_sections(conn, strategy_id):
 
 
 def set_section_state(conn, strategy_id, kind, state):
+    if kind not in SECTION_KINDS:
+        raise ValueError(f"Unknown section kind: {kind}")
     if state not in SECTION_STATES:
         raise ValueError(f"Unknown section state: {state}")
     conn.execute(
@@ -133,6 +136,8 @@ def set_section_state(conn, strategy_id, kind, state):
 
 
 def log_decision(conn, strategy_id, section_kind, action, user_reason=None):
+    if section_kind not in SECTION_KINDS:
+        raise ValueError(f"Unknown section kind: {section_kind}")
     conn.execute(
         "INSERT INTO strategy_decisions (strategy_id, section_kind, action, user_reason, created_at) "
         "VALUES (?, ?, ?, ?, ?)",

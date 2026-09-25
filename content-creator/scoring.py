@@ -18,13 +18,17 @@ EVIDENCE_LEVELS = ("data", "pattern", "reasoned")
 def validate_scored_goals(items, allowed_goals):
     if not isinstance(items, list) or not items:
         raise ai.InvalidAIResponseError("A pontuação dos objectivos não veio como uma lista.")
+    seen = set()
     for item in items:
         if not isinstance(item, dict):
             raise ai.InvalidAIResponseError("Um objectivo pontuado tem formato inválido.")
         if item.get("goal") not in allowed_goals:
             raise ai.InvalidAIResponseError(f"Objectivo desconhecido: {item.get('goal')!r}.")
+        if item["goal"] in seen:
+            raise ai.InvalidAIResponseError(f"Objectivo repetido: {item['goal']!r}.")
+        seen.add(item["goal"])
         score = item.get("score")
-        if not isinstance(score, (int, float)) or not 0 <= score <= 100:
+        if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0 <= score <= 100:
             raise ai.InvalidAIResponseError("A pontuação tem de estar entre 0 e 100.")
         if item.get("evidence") not in EVIDENCE_LEVELS:
             raise ai.InvalidAIResponseError("O nível de evidência é inválido.")

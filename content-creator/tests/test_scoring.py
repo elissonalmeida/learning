@@ -52,6 +52,9 @@ def test_score_goals_prompt_carries_tone_rule_and_evidence():
     [{"goal": "build_authority", "score": 500, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}],
     [{"goal": "build_authority", "score": 5, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "prova"}],
     [{"goal": "build_authority", "score": 5, "metric": "m", "target": "t", "reasons": [], "evidence": "reasoned"}],
+    [{"goal": "build_authority", "score": True, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}],
+    [{"goal": "build_authority", "score": False, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}],
+    [{"goal": "build_authority", "score": 5, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}] * 2,
     {"not": "a list"},
 ])
 def test_validate_rejects_malformed_items(bad):
@@ -62,4 +65,10 @@ def test_validate_rejects_malformed_items(bad):
 def test_data_evidence_is_downgraded_when_no_windsor_data():
     payload = [{"goal": "build_authority", "score": 70, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "data"}]
     items, *_ = scoring.score_goals(fake_client(payload), PROFILE, EVIDENCE)
+    assert items[0]["evidence"] == "reasoned"
+
+
+def test_pattern_evidence_is_downgraded_when_no_findings():
+    payload = [{"goal": "build_authority", "score": 70, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "pattern"}]
+    items, *_ = scoring.score_goals(fake_client(payload), PROFILE, {"windsor": None, "findings": []})
     assert items[0]["evidence"] == "reasoned"

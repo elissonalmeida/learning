@@ -68,3 +68,32 @@ def test_turns_roundtrip(conn):
     coach_store.add_turn(conn, sid, "user", "olá")
     coach_store.add_turn(conn, sid, "coach", "olá!")
     assert [t["role"] for t in coach_store.list_turns(conn, sid)] == ["user", "coach"]
+
+
+def test_set_section_state_rejects_unknown_kind_and_state(conn):
+    sid = coach_store.create_strategy(conn, "brand-a")
+    coach_store.set_section(conn, sid, "goals", {})
+    with pytest.raises(ValueError):
+        coach_store.set_section_state(conn, sid, "nonsense", "accepted")
+    with pytest.raises(ValueError):
+        coach_store.set_section_state(conn, sid, "goals", "weird")
+    coach_store.set_section_state(conn, sid, "goals", "accepted")
+    assert coach_store.get_sections(conn, sid)["goals"]["state"] == "accepted"
+
+
+def test_log_decision_rejects_unknown_kind(conn):
+    sid = coach_store.create_strategy(conn, "brand-a")
+    with pytest.raises(ValueError):
+        coach_store.log_decision(conn, sid, "nonsense", "edit")
+    assert coach_store.list_decisions(conn, sid) == []
+
+
+def test_empty_profile_reads_back_as_empty_dict_and_absent_as_none(conn):
+    empty = coach_store.create_strategy(conn, "brand-a", profile={})
+    absent = coach_store.create_strategy(conn, "brand-a")
+    assert coach_store.get_strategy(conn, empty)["profile"] == {}
+    assert coach_store.get_strategy(conn, absent)["profile"] is None
+
+
+def test_get_strategy_missing_returns_none(conn):
+    assert coach_store.get_strategy(conn, 9999) is None
