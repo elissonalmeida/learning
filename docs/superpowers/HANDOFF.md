@@ -9,17 +9,18 @@ project) for history.
 - **content-creator** (`content-creator/`): v1 (text drafting pipeline) and
   v1.1 (AI image generation for carousel slides) are both shipped, merged to
   `main`, and working end-to-end against the real Gemini/Anthropic APIs.
-- **Parallel ticket workflow** (this doc, plus `scripts/`): being built now,
-  from `docs/superpowers/specs/2026-09-14-parallel-ticket-workflow-design.md`
-  and `docs/superpowers/plans/2026-09-14-parallel-ticket-workflow-implementation.md`.
+- **Parallel ticket workflow**: built; `status:*` labels exist on
+  `elissonalmeida/learning`.
+- **Look-and-feel** (AURA v4 theming): plan
+  `content-creator/docs/superpowers/plans/2026-09-15-look-and-feel.md`,
+  feature branch `look-and-feel`. Tickets: #13 (Task 1, pending),
+  #14 (Task 2) and #15 (Task 3), both blocked on #13.
 
 ## What's next
 
-Check the plan above for remaining tasks. Once this workflow itself is
-built, the next real feature work is picked from
-`content-creator/docs/backlog.md` — notably, decomposing the "full AURA
-functionality" vision into its own sub-project specs (calendar first, per
-the backlog's own note).
+Claim and work #13 (`pick_ticket.py --claim 13`), then #14 and #15 can run
+in parallel. Afterwards, pick the next backlog item from
+`content-creator/docs/backlog.md`.
 
 ## One-time setup per repo
 
