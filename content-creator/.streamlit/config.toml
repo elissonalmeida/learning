@@ -1,0 +1,21 @@
+[theme]
+base = "light"
+primaryColor = "#B85C5C"
+backgroundColor = "#F5EFE2"
+secondaryBackgroundColor = "#FFFDF8"
+textColor = "#2C1A0E"
+borderColor = "#D4C4A8"
+font = "DM Sans:https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap"
+headingFont = "Cormorant Garamond:https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap"
+baseRadius = "0.75rem"
+buttonRadius = "0.5rem"
+showWidgetBorder = true
+redColor = "#B85C5C"
+orangeColor = "#C4922A"
+greenColor = "#7A9E6F"
+blueColor = "#185FA5"
+violetColor = "#534AB7"
+grayColor = "#8B6A4A"
+
+[client]
+toolbarMode = "minimal"
