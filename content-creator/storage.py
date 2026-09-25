@@ -10,6 +10,7 @@ def images_root(db_path):
 
 
 MAX_SLUG_LEN = 50  # keeps folder paths well under the Windows 260-char limit
+MAX_FOLDER_LEN = len("2026-09-13_") + MAX_SLUG_LEN + len("_99")  # date + slug + collision suffix
 
 
 def slugify(text):
@@ -32,4 +33,4 @@ def make_carousel_folder(root, topic, date_str):
 
 def is_valid_folder_name(folder):
     """False for names longer than make_carousel_folder can produce (saved by an older version)."""
-    return len(folder) <= len("2026-09-13_") + MAX_SLUG_LEN + len("_99")
+    return len(folder) <= MAX_FOLDER_LEN
