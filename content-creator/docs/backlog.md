@@ -194,6 +194,32 @@ a human approving each action.
   driving both social content and a website is consistent with "full
   marketing agent." Not scoped in; just worth remembering it exists.
 
+## Multiple social profiles per brand
+
+**What:** For now one brand pack = one Instagram profile (one Windsor.ai
+connection per brand). Later, a brand could connect several profiles or
+other networks (TikTok, LinkedIn, YouTube, etc.), each with its own
+analytics connection.
+
+**Why deferred:** Keeps the first calendar/strategy/Windsor specs simple.
+Design the per-brand connection setting so it can grow into a list later.
+
+---
+
+## Paid scraping services for Sherlock (e.g. Apify)
+
+**What:** Pay-per-use scraping services (cents per profile) that handle
+platform blocking for Instagram/TikTok. They would sit in the middle of
+Sherlock's fallback chain, before the dummy-account crawl.
+
+**Why deferred:** User does not want additional paid services for now.
+Sherlock's first version uses only free sources: website fetch, official
+Instagram Business Discovery API, yt-dlp/whisper, dummy-account crawl, and
+guided upload. If a paid tier is added later, show the estimated cost first
+(same pattern as the daily spend cap).
+
+---
+
 ## In-app usage menus / help per feature
 
 **What:** Menus or help screens inside the app itself explaining how to
@@ -337,3 +363,64 @@ building, not whether the plumbing is hard.
 - **External-source mode (#10) is the most speculative item** — treat as
   a "someday, if it comes up" note rather than a real candidate until
   there's a concrete reason to seed content from outside sources.
+
+---
+
+## Low-friction daily workflow — ideas sourced from CoworkOS
+
+**Context:** CoworkOS (bettercreating.com, a paid template for Claude
+Desktop's Cowork tab) is a generic personal-assistant layer: onboarding
+interview, scheduled briefings, a memory file that updates from
+corrections. It isn't content-specific and isn't worth buying for Aura, but
+its ideas fit the goal of making content creation low-friction for people
+to whom it doesn't come naturally. Aura can do them better because it
+already knows the brand pack, the calendar, and (eventually) the results.
+
+### 11. Morning brief inside Aura
+
+**What:** A daily "today" view: the post planned for today, what's still
+due, and yesterday's result, in a short, comforting summary.
+
+**Depends on:** Calendar (#2) for what's planned; Windsor results (#1) for
+yesterday's numbers. Works with partial data (calendar only) at first.
+
+### 12. Guided daily flow (checklist so no step is missed)
+
+**What:** Today's steps as a checklist (idea → draft → review → approve →
+publish) that shows where you left off and lets you go back and refine.
+
+**Note:** Close to the calendar-post link spec; design together with #11.
+
+### 13. Onboarding coach (first-run interview)
+
+**What:** A conversational first-run interview that fills in the brand pack
+(tone, audience, anti-patterns) instead of hand-authoring the files.
+
+**Note:** Overlaps the "App kickoff / getting-started flow" item and the
+Brand Wizard pattern in #3. Treat as one design, not three.
+
+### 14. Memory of corrections
+
+**What:** When the user edits a draft, Aura records the preference (e.g.
+"always shorten the opener") and applies it to future drafts, with a way to
+review and remove what it has learned.
+
+**Why it matters:** Probably the highest-value idea here. It complements
+`quality-criteria.md` (which encodes rules by hand) with rules learned from
+real edits. Needs a storage design (per brand) and a guard against learning
+one-off edits as permanent rules.
+
+**Bundling:** #11 and #12 belong together. #13 belongs with the kickoff
+item. #14 stands alone but pairs with #8 (review passes).
+
+---
+
+## Deferred from calendar-cluster spec review
+
+- **Dummy-account crawl for Sherlock** (secondary account with a saved
+  Playwright login; opt-in, slow read-only pacing). Deferred; v1 uses
+  website fetch, Instagram Business Discovery, yt-dlp/whisper, guided upload.
+- **Calendar month-grid view.** v1 is a list view.
+- **Markdown export of a month/plan** (part of #5). Benefit unclear for now.
+- **Bulk "create all posts" from the calendar.** Image creation isn't
+  polished yet; v1 is one post per slot.
