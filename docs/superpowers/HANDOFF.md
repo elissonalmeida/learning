@@ -17,7 +17,7 @@ project) for history.
   `strategy-coach`), all `status:done`. Everything else is still specs,
   plans and tickets:
 
-  | Plan (`content-creator/docs/superpowers/plans/`) | Feature branch | Tickets |
+  | Plan (`content-creator/docs/superpowers/plans/`) | Old feature branch (merged, retired) | Tickets |
   |---|---|---|
   | `2026-09-15-look-and-feel.md` | `look-and-feel` | #13-#15 |
   | `2026-09-25-strategy-coach.md` (includes Sherlock) | `strategy-coach` | #16-#25 |
@@ -33,21 +33,26 @@ project) for history.
 
 - Unblocked right now: #14, #15 (look-and-feel), #21 (strategy-coach),
   #26, #27 (content-calendar), #33 (calendar-post-link), #37, #38, #40
-  (windsor-results). Run `pick_ticket.py` for the live list.
-- The ticket scripts (`scripts/`) must be identical on `main` and every feature
-  branch: they run from whichever branch is checked out, and an old copy crashes
-  on Windows (cp1252 decoding of UTF-8 issue bodies). Guarded by
-  `scripts/tests/test_encoding.py`. Any new feature branch must start from
-  current `main`; if you change `scripts/`, sync it to all feature branches.
+  (windsor-results), plus user-reported bugs/feature #46 (slide text card
+  unreadable, blocks publishing), #47 (fullscreen image has no way back), #48
+  (generate/recreate all images), #49 (Instagram-style preview). Run
+  `pick_ticket.py` for the live list.
+- **Single-branch workflow (since 2026-09-25):** ALL work lives on `main`. The five
+  feature branches (`look-and-feel`, `strategy-coach`, `content-calendar`,
+  `calendar-post-link`, `windsor-results`) were merged into `main` and are retired; do not
+  branch from or merge into them. No PRs. Ticket branches (`ticket-<n>`) are cut from `main`
+  in a worktree under `../learning-worktrees/` and merged back with
+  `merge_ticket.py ... --feature-branch main`.
+- **Keep the main folder (`Documents/learning`) on `main`.** The user runs the app from it
+  (`content-creator/run.bat`); never check out other branches in it. Use worktrees. Check
+  `ListAgents` for other Claude sessions before touching shared state.
+- Note: strategy-coach and look-and-feel were merged **without** their final whole-branch
+  reviews. Do a whole-`main` review before shipping a coach or theme change to users.
 - Claim tickets with `pick_ticket.py` (it only lists unblocked ones; never
   claim a `status:blocked` ticket by number). One ticket per thread.
-- **Cross-plan rule:** a ticket whose body says `Depends on: #N` on another
-  plan's *final* ticket (#25 strategy-coach, #32 content-calendar, #36
-  calendar-post-link, #45 windsor-results) may only start after that whole
-  plan was reviewed (final whole-branch review) and merged into `main`, and
-  `main` was merged into the dependent plan's feature branch. Suggested
-  order: strategy-coach -> content-calendar -> calendar-post-link; look-and-feel
-  and windsor-results Tasks 1-4 can run in parallel with anything.
+- Ticket dependencies (`Depends on: #N`) still gate order; the old cross-plan
+  "wait for the other plan to be merged" rule is moot now that everything is on `main`.
+- Guard: `scripts/tests/test_encoding.py` keeps the Windows UTF-8 fix in the ticket scripts.
 - Tickets modify `app.py` in small, separate spots; expect trivial merge
   conflicts there and in `requirements.txt`, resolve by keeping both sides.
 - Product tone rule: all app text gentle and encouraging, never urgent
@@ -86,8 +91,8 @@ gh label create status:done --repo <owner/repo> --color 5319e7
    another ticket in the same invocation. Starting the next one is always a
    separate, deliberate action.
 6. Before starting work on the claimed ticket, create its isolated
-   worktree/branch via `superpowers:using-git-worktrees`, off the plan's
-   feature branch. Convention: name the branch (and worktree) after the
+   worktree/branch via `superpowers:using-git-worktrees`, off `main` (the plan's
+   old feature branch is retired). Convention: name the branch (and worktree) after the
    issue number, e.g. `ticket-<issue-number>`.
 7. To merge a finished ticket back: `python3 scripts/merge_ticket.py <project-dir> --repo <owner/repo> --issue <n> --feature-branch <name> --ticket-branch <name> --test-command "<command>" --commit-range <a..b>`.
 8. Before stopping work, update this file (`docs/superpowers/HANDOFF.md`) to
