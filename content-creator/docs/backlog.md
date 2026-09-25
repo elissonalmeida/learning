@@ -366,6 +366,55 @@ building, not whether the plumbing is hard.
 
 ---
 
+## Low-friction daily workflow — ideas sourced from CoworkOS
+
+**Context:** CoworkOS (bettercreating.com, a paid template for Claude
+Desktop's Cowork tab) is a generic personal-assistant layer: onboarding
+interview, scheduled briefings, a memory file that updates from
+corrections. It isn't content-specific and isn't worth buying for Aura, but
+its ideas fit the goal of making content creation low-friction for people
+to whom it doesn't come naturally. Aura can do them better because it
+already knows the brand pack, the calendar, and (eventually) the results.
+
+### 11. Morning brief inside Aura
+
+**What:** A daily "today" view: the post planned for today, what's still
+due, and yesterday's result, in a short, comforting summary.
+
+**Depends on:** Calendar (#2) for what's planned; Windsor results (#1) for
+yesterday's numbers. Works with partial data (calendar only) at first.
+
+### 12. Guided daily flow (checklist so no step is missed)
+
+**What:** Today's steps as a checklist (idea → draft → review → approve →
+publish) that shows where you left off and lets you go back and refine.
+
+**Note:** Close to the calendar-post link spec; design together with #11.
+
+### 13. Onboarding coach (first-run interview)
+
+**What:** A conversational first-run interview that fills in the brand pack
+(tone, audience, anti-patterns) instead of hand-authoring the files.
+
+**Note:** Overlaps the "App kickoff / getting-started flow" item and the
+Brand Wizard pattern in #3. Treat as one design, not three.
+
+### 14. Memory of corrections
+
+**What:** When the user edits a draft, Aura records the preference (e.g.
+"always shorten the opener") and applies it to future drafts, with a way to
+review and remove what it has learned.
+
+**Why it matters:** Probably the highest-value idea here. It complements
+`quality-criteria.md` (which encodes rules by hand) with rules learned from
+real edits. Needs a storage design (per brand) and a guard against learning
+one-off edits as permanent rules.
+
+**Bundling:** #11 and #12 belong together. #13 belongs with the kickoff
+item. #14 stands alone but pairs with #8 (review passes).
+
+---
+
 ## Deferred from calendar-cluster spec review
 
 - **Dummy-account crawl for Sherlock** (secondary account with a saved

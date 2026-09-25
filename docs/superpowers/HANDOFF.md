@@ -11,20 +11,49 @@ project) for history.
   `main`, and working end-to-end against the real Gemini/Anthropic APIs.
 - **Parallel ticket workflow**: built; `status:*` labels exist on
   `elissonalmeida/learning`.
-- **Look-and-feel** (AURA v4 theming): plan
-  `content-creator/docs/superpowers/plans/2026-09-15-look-and-feel.md`,
-  feature branch `look-and-feel`. Tickets: #13 (Task 1, pending),
-  #14 (Task 2) and #15 (Task 3), both blocked on #13.
+- **All planned work is broken into GitHub tickets** (labels `status:*`).
+  Implemented so far: #13 (look-and-feel, global theme, merged into
+  `look-and-feel`) and #16, #17, #18, #19, #20, #23 (strategy-coach: tone guard, coach store, Sherlock models + website, video and Instagram gather, goal scoring; merged into
+  `strategy-coach`), all `status:done`. Everything else is still specs,
+  plans and tickets:
+
+  | Plan (`content-creator/docs/superpowers/plans/`) | Feature branch | Tickets |
+  |---|---|---|
+  | `2026-09-15-look-and-feel.md` | `look-and-feel` | #13-#15 |
+  | `2026-09-25-strategy-coach.md` (includes Sherlock) | `strategy-coach` | #16-#25 |
+  | `2026-09-25-content-calendar.md` | `content-calendar` | #26-#32 |
+  | `2026-09-25-calendar-post-link.md` | `calendar-post-link` | #33-#36 |
+  | `2026-09-25-windsor-results.md` | `windsor-results` | #37-#45 |
+
+  Specs live in `content-creator/docs/superpowers/specs/` (the four
+  `2026-09-25-*` specs were drafted without live review and got one
+  decisions pass on 2026-09-25).
 
 ## What's next
 
-- Implement look-and-feel: claim #13 (`pick_ticket.py --claim 13`), then #14/#15.
-- **Calendar cluster: 4 specs drafted, NOT yet reviewed by the user**
-  (`content-creator/docs/superpowers/specs/2026-09-25-*`): strategy coach
-  (includes Sherlock), content calendar, calendar-to-post-creator link,
-  Windsor feedback loop. Build in that order. After user review: writing-plans
-  for each, then `generate_tickets.py`.
-- Product tone rule: all app text gentle and encouraging, never urgent.
+- Unblocked right now: #14, #15 (look-and-feel), #21 (strategy-coach),
+  #26, #27 (content-calendar), #33 (calendar-post-link), #37, #38, #40
+  (windsor-results). Run `pick_ticket.py` for the live list.
+- The ticket scripts (`scripts/`) must be identical on `main` and every feature
+  branch: they run from whichever branch is checked out, and an old copy crashes
+  on Windows (cp1252 decoding of UTF-8 issue bodies). Guarded by
+  `scripts/tests/test_encoding.py`. Any new feature branch must start from
+  current `main`; if you change `scripts/`, sync it to all feature branches.
+- Claim tickets with `pick_ticket.py` (it only lists unblocked ones; never
+  claim a `status:blocked` ticket by number). One ticket per thread.
+- **Cross-plan rule:** a ticket whose body says `Depends on: #N` on another
+  plan's *final* ticket (#25 strategy-coach, #32 content-calendar, #36
+  calendar-post-link, #45 windsor-results) may only start after that whole
+  plan was reviewed (final whole-branch review) and merged into `main`, and
+  `main` was merged into the dependent plan's feature branch. Suggested
+  order: strategy-coach -> content-calendar -> calendar-post-link; look-and-feel
+  and windsor-results Tasks 1-4 can run in parallel with anything.
+- Tickets modify `app.py` in small, separate spots; expect trivial merge
+  conflicts there and in `requirements.txt`, resolve by keeping both sides.
+- Product tone rule: all app text gentle and encouraging, never urgent
+  (`content-creator/tone_guard.py` once built).
+- Windsor field names in `windsor.py` must be verified against the real
+  connector (windsor-results Task 1, Step 1).
 
 ## One-time setup per repo
 
@@ -88,3 +117,14 @@ gh label create status:done --repo <owner/repo> --color 5319e7
 - `content-creator/docs/backlog.md` — deferred ideas, not forgotten.
 - `docs/superpowers/specs/` and `docs/superpowers/plans/` (repo root, and
   `content-creator/docs/superpowers/` for that project's own specs/plans).
+
+## Notes for upcoming Sherlock tickets
+
+- `sherlock.gather.gather_website` needs a scheme: prepend `https://` to scheme-less
+  URLs before calling it (detect_platform classes `www.x.pt` as website but the
+  fetch fails without a scheme). Raised in the #18 review.
+- `sherlock.gather.gather_video` takes `transcribe=None`: the orchestrator (#22) must pass
+  `transcribe=gather.whisper_transcribe` if it wants whisper transcripts.
+- `gather_instagram_discovery(source, ig_user_id, access_token)` uses Graph `GRAPH_VERSION = "v21.0"`;
+  Meta's docs now show v25.0. Bump when doing the real end-to-end test (needs a Business/Creator
+  account and token; without them it returns `NeedsUpload`).
