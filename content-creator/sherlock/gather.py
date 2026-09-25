@@ -57,9 +57,9 @@ def gather_website(url, fetch=_http_fetch):
 
 def _video_text(info):
     lines = [
-        f"Título: {info.get('title', '')}",
-        f"Autor: {info.get('uploader', '')}",
-        f"Descrição: {info.get('description', '')}",
+        f"Título: {info.get('title') or ''}",
+        f"Autor: {info.get('uploader') or ''}",
+        f"Descrição: {info.get('description') or ''}",
     ]
     for label, key in (("Visualizações", "view_count"), ("Gostos", "like_count"), ("Comentários", "comment_count")):
         if info.get(key) is not None:
@@ -72,13 +72,16 @@ def _video_text(info):
 def gather_video(url, run=subprocess.run, transcribe=None):
     kind = detect_platform(url)
     try:
-        proc = run(["yt-dlp", "--dump-single-json", "--skip-download", url], capture_output=True, text=True)
+        proc = run(["yt-dlp", "--dump-single-json", "--skip-download", url], capture_output=True, text=True, encoding="utf-8", errors="replace")
     except FileNotFoundError:
         return NeedsUpload(url, "O yt-dlp não está instalado.", upload_instructions(kind))
     if proc.returncode != 0:
         reason = (proc.stderr or "").strip()[:200] or "O yt-dlp não conseguiu ler este vídeo."
         return NeedsUpload(url, reason, upload_instructions(kind))
-    text = _video_text(json.loads(proc.stdout))
+    try:
+        text = _video_text(json.loads(proc.stdout))
+    except (TypeError, ValueError):
+        return NeedsUpload(url, "O yt-dlp não conseguiu ler este vídeo.", upload_instructions(kind))
     method = "yt-dlp"
     transcript = transcribe(url) if transcribe else None
     if transcript:
@@ -98,7 +101,7 @@ def whisper_transcribe(url, run=subprocess.run):
         with tempfile.TemporaryDirectory() as tmp:
             proc = run(
                 ["yt-dlp", "-x", "--audio-format", "mp3", "-o", f"{tmp}/audio.%(ext)s", url],
-                capture_output=True, text=True,
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
             )
             if proc.returncode != 0:
                 return None

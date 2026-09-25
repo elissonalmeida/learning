@@ -56,3 +56,29 @@ def test_whisper_transcribe_returns_none_when_whisper_not_installed(monkeypatch)
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
     assert gather.whisper_transcribe("https://youtu.be/x") is None
+
+
+def test_gather_video_uses_utf8_and_keeps_accents():
+    seen = {}
+
+    def run(cmd, **kwargs):
+        seen.update(kwargs)
+        return SimpleNamespace(returncode=0, stdout=json.dumps({"title": "3 hábitos"}), stderr="")
+
+    result = gather.gather_video("https://youtu.be/x", run=run)
+    assert seen["encoding"] == "utf-8" and seen["errors"] == "replace"
+    assert "3 hábitos" in result.text
+
+
+def test_gather_video_returns_needs_upload_on_bad_json():
+    for out in ("não é json", None):
+        def run(cmd, out=out, **kwargs):
+            return SimpleNamespace(returncode=0, stdout=out, stderr="")
+
+        assert isinstance(gather.gather_video("https://youtu.be/x", run=run), models.NeedsUpload)
+
+
+def test_gather_video_null_fields_do_not_render_none():
+    info = {"title": None, "uploader": None, "description": None}
+    result = gather.gather_video("https://youtu.be/x", run=fake_run_ok(info))
+    assert "None" not in result.text
