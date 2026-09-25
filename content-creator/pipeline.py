@@ -89,7 +89,7 @@ def ensure_image_folder(conn, idea, images_root, storage_module=storage):
     """Compute (once) and persist the per-carousel folder name, or return the
     existing one — so regenerating a single slide always lands in the same
     place instead of picking a new folder each time."""
-    if idea.get("image_folder"):
+    if idea.get("image_folder") and storage_module.is_valid_folder_name(idea["image_folder"]):
         folder = idea["image_folder"]
     else:
         date_str = datetime.now(timezone.utc).date().isoformat()

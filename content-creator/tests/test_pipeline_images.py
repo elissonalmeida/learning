@@ -146,3 +146,14 @@ def test_maybe_mark_images_ready_only_when_all_slides_approved(conn, idea, tmp_p
     pipeline.approve_slide_image(conn, row1["id"])
     pipeline.maybe_mark_images_ready(conn, idea["id"], total_slides=2)
     assert db.get_idea(conn, idea["id"])["status"] == "images_ready"
+
+
+def test_ensure_image_folder_replaces_overlong_saved_folder(conn, idea, tmp_path):
+    long_name = "2026-09-25_" + "a" * 250
+    db.set_idea_image_folder(conn, idea["id"], long_name)
+    idea = db.get_idea(conn, idea["id"])
+    folder = pipeline.ensure_image_folder(conn, idea, tmp_path)
+    assert folder != long_name
+    assert len(folder) <= 70
+    assert (tmp_path / folder).is_dir()
+    assert db.get_idea(conn, idea["id"])["image_folder"] == folder
