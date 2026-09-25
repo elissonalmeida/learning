@@ -1,7 +1,10 @@
+import json
+import subprocess
+import tempfile
 import urllib.request
 from html.parser import HTMLParser
 
-from sherlock.models import GatherResult, NeedsUpload, upload_instructions
+from sherlock.models import GatherResult, NeedsUpload, detect_platform, upload_instructions
 
 MAX_CHARS = 20000
 MIN_CHARS = 200
@@ -50,3 +53,56 @@ def gather_website(url, fetch=_http_fetch):
     if len(text) < MIN_CHARS:
         return NeedsUpload(url, "A página quase não tem texto legível.", upload_instructions("website"))
     return GatherResult(url, "website", text)
+
+
+def _video_text(info):
+    lines = [
+        f"Título: {info.get('title', '')}",
+        f"Autor: {info.get('uploader', '')}",
+        f"Descrição: {info.get('description', '')}",
+    ]
+    for label, key in (("Visualizações", "view_count"), ("Gostos", "like_count"), ("Comentários", "comment_count")):
+        if info.get(key) is not None:
+            lines.append(f"{label}: {info[key]}")
+    if info.get("tags"):
+        lines.append("Etiquetas: " + ", ".join(info["tags"]))
+    return "\n".join(lines)
+
+
+def gather_video(url, run=subprocess.run, transcribe=None):
+    kind = detect_platform(url)
+    try:
+        proc = run(["yt-dlp", "--dump-single-json", "--skip-download", url], capture_output=True, text=True)
+    except FileNotFoundError:
+        return NeedsUpload(url, "O yt-dlp não está instalado.", upload_instructions(kind))
+    if proc.returncode != 0:
+        reason = (proc.stderr or "").strip()[:200] or "O yt-dlp não conseguiu ler este vídeo."
+        return NeedsUpload(url, reason, upload_instructions(kind))
+    text = _video_text(json.loads(proc.stdout))
+    method = "yt-dlp"
+    transcript = transcribe(url) if transcribe else None
+    if transcript:
+        text += f"\n\nTranscrição:\n{transcript}"
+        method = "yt-dlp+whisper"
+    return GatherResult(url, method, text[:MAX_CHARS])
+
+
+def whisper_transcribe(url, run=subprocess.run):
+    """Best-effort transcript via yt-dlp audio download + openai-whisper. Returns None if
+    whisper or ffmpeg are unavailable or anything fails: the transcript is a bonus."""
+    try:
+        import whisper  # noqa: WPS433 (optional heavy dependency, imported lazily)
+    except ImportError:
+        return None
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = run(
+                ["yt-dlp", "-x", "--audio-format", "mp3", "-o", f"{tmp}/audio.%(ext)s", url],
+                capture_output=True, text=True,
+            )
+            if proc.returncode != 0:
+                return None
+            model = whisper.load_model("base")
+            return model.transcribe(f"{tmp}/audio.mp3").get("text", "").strip() or None
+    except Exception:
+        return None
