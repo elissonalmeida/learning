@@ -157,3 +157,11 @@ def test_ensure_image_folder_replaces_overlong_saved_folder(conn, idea, tmp_path
     assert len(folder) <= 70
     assert (tmp_path / folder).is_dir()
     assert db.get_idea(conn, idea["id"])["image_folder"] == folder
+
+
+def test_ensure_image_folder_keeps_overlong_saved_folder_that_already_exists(conn, idea, tmp_path):
+    legacy = "2026-09-25_" + "b" * 60
+    (tmp_path / legacy).mkdir()
+    db.set_idea_image_folder(conn, idea["id"], legacy)
+    idea = db.get_idea(conn, idea["id"])
+    assert pipeline.ensure_image_folder(conn, idea, tmp_path) == legacy
