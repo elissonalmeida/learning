@@ -13,7 +13,7 @@ project) for history.
   `elissonalmeida/learning`.
 - **All planned work is broken into GitHub tickets** (labels `status:*`).
   Implemented so far: #13 (look-and-feel, global theme, merged into
-  `look-and-feel`) and #16, #17, #18, #23 (strategy-coach: tone guard, coach store, Sherlock models + website gather, goal scoring; merged into
+  `look-and-feel`) and #16, #17, #18, #19, #23 (strategy-coach: tone guard, coach store, Sherlock models + website gather + video gather, goal scoring; merged into
   `strategy-coach`), all `status:done`. Everything else is still specs,
   plans and tickets:
 
@@ -31,7 +31,7 @@ project) for history.
 
 ## What's next
 
-- Unblocked right now: #14, #15 (look-and-feel), #19, #21 (strategy-coach),
+- Unblocked right now: #14, #15 (look-and-feel), #20, #21 (strategy-coach),
   #26, #27 (content-calendar), #33 (calendar-post-link), #37, #38, #40
   (windsor-results). Run `pick_ticket.py` for the live list.
 - The ticket scripts (`scripts/`) must be identical on `main` and every feature
@@ -123,3 +123,5 @@ gh label create status:done --repo <owner/repo> --color 5319e7
 - `sherlock.gather.gather_website` needs a scheme: prepend `https://` to scheme-less
   URLs before calling it (detect_platform classes `www.x.pt` as website but the
   fetch fails without a scheme). Raised in the #18 review.
+- `sherlock.gather.gather_video` takes `transcribe=None`: the orchestrator (#22) must pass
+  `transcribe=gather.whisper_transcribe` if it wants whisper transcripts.
