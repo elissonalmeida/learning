@@ -11,20 +11,38 @@ project) for history.
   `main`, and working end-to-end against the real Gemini/Anthropic APIs.
 - **Parallel ticket workflow**: built; `status:*` labels exist on
   `elissonalmeida/learning`.
-- **Look-and-feel** (AURA v4 theming): plan
-  `content-creator/docs/superpowers/plans/2026-09-15-look-and-feel.md`,
-  feature branch `look-and-feel`. Tickets: #13 (Task 1, pending),
-  #14 (Task 2) and #15 (Task 3), both blocked on #13.
+- **All planned work is broken into GitHub tickets** (labels `status:*`).
+  Nothing is implemented yet except the specs, plans and tickets:
+
+  | Plan (`content-creator/docs/superpowers/plans/`) | Feature branch | Tickets |
+  |---|---|---|
+  | `2026-09-15-look-and-feel.md` | `look-and-feel` | #13-#15 |
+  | `2026-09-25-strategy-coach.md` (includes Sherlock) | `strategy-coach` | #16-#25 |
+  | `2026-09-25-content-calendar.md` | `content-calendar` | #26-#32 |
+  | `2026-09-25-calendar-post-link.md` | `calendar-post-link` | #33-#36 |
+  | `2026-09-25-windsor-results.md` | `windsor-results` | #37-#45 |
+
+  Specs live in `content-creator/docs/superpowers/specs/` (the four
+  `2026-09-25-*` specs were drafted without live review and got one
+  decisions pass on 2026-09-25).
 
 ## What's next
 
-- Implement look-and-feel: claim #13 (`pick_ticket.py --claim 13`), then #14/#15.
-- **Calendar cluster: 4 specs drafted, NOT yet reviewed by the user**
-  (`content-creator/docs/superpowers/specs/2026-09-25-*`): strategy coach
-  (includes Sherlock), content calendar, calendar-to-post-creator link,
-  Windsor feedback loop. Build in that order. After user review: writing-plans
-  for each, then `generate_tickets.py`.
-- Product tone rule: all app text gentle and encouraging, never urgent.
+- Claim tickets with `pick_ticket.py` (it only lists unblocked ones; never
+  claim a `status:blocked` ticket by number). One ticket per thread.
+- **Cross-plan rule:** a ticket whose body says `Depends on: #N` on another
+  plan's *final* ticket (#25 strategy-coach, #32 content-calendar, #36
+  calendar-post-link, #45 windsor-results) may only start after that whole
+  plan was reviewed (final whole-branch review) and merged into `main`, and
+  `main` was merged into the dependent plan's feature branch. Suggested
+  order: strategy-coach -> content-calendar -> calendar-post-link; look-and-feel
+  and windsor-results Tasks 1-4 can run in parallel with anything.
+- Tickets modify `app.py` in small, separate spots; expect trivial merge
+  conflicts there and in `requirements.txt`, resolve by keeping both sides.
+- Product tone rule: all app text gentle and encouraging, never urgent
+  (`content-creator/tone_guard.py` once built).
+- Windsor field names in `windsor.py` must be verified against the real
+  connector (windsor-results Task 1, Step 1).
 
 ## One-time setup per repo
 

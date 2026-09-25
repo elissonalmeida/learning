@@ -7,7 +7,7 @@ import plan_parser
 
 def run_gh(args, input_text=None):
     result = subprocess.run(
-        ["gh"] + args, input=input_text, capture_output=True, text=True, check=True,
+        ["gh"] + args, input=input_text, capture_output=True, text=True, encoding="utf-8", check=True,
     )
     return result.stdout
 
