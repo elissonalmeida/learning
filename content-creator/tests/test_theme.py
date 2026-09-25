@@ -29,3 +29,26 @@ def test_config_toml_hides_default_toolbar():
         config = tomllib.load(f)
 
     assert config["client"]["toolbarMode"] == "minimal"
+from unittest.mock import patch
+
+import theme
+
+
+def test_inject_theme_renders_header_css_with_unsafe_html():
+    with patch("theme.st") as mock_st:
+        theme.inject_theme()
+
+    mock_st.markdown.assert_called_once()
+    args, kwargs = mock_st.markdown.call_args
+    assert "app-header" in args[0]
+    assert kwargs["unsafe_allow_html"] is True
+
+
+def test_render_header_includes_title_text_and_class():
+    with patch("theme.st") as mock_st:
+        theme.render_header("Content Creator — marianabotelho-ig")
+
+    mock_st.markdown.assert_called_once()
+    html = mock_st.markdown.call_args[0][0]
+    assert "app-header-title" in html
+    assert "Content Creator — marianabotelho-ig" in html
