@@ -18,9 +18,13 @@ project) for history.
 
 ## What's next
 
-Claim and work #13 (`pick_ticket.py --claim 13`), then #14 and #15 can run
-in parallel. Afterwards, pick the next backlog item from
-`content-creator/docs/backlog.md`.
+- Implement look-and-feel: claim #13 (`pick_ticket.py --claim 13`), then #14/#15.
+- **Calendar cluster: 4 specs drafted, NOT yet reviewed by the user**
+  (`content-creator/docs/superpowers/specs/2026-09-25-*`): strategy coach
+  (includes Sherlock), content calendar, calendar-to-post-creator link,
+  Windsor feedback loop. Build in that order. After user review: writing-plans
+  for each, then `generate_tickets.py`.
+- Product tone rule: all app text gentle and encouraging, never urgent.
 
 ## One-time setup per repo
 

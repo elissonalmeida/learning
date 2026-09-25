@@ -194,6 +194,32 @@ a human approving each action.
   driving both social content and a website is consistent with "full
   marketing agent." Not scoped in; just worth remembering it exists.
 
+## Multiple social profiles per brand
+
+**What:** For now one brand pack = one Instagram profile (one Windsor.ai
+connection per brand). Later, a brand could connect several profiles or
+other networks (TikTok, LinkedIn, YouTube, etc.), each with its own
+analytics connection.
+
+**Why deferred:** Keeps the first calendar/strategy/Windsor specs simple.
+Design the per-brand connection setting so it can grow into a list later.
+
+---
+
+## Paid scraping services for Sherlock (e.g. Apify)
+
+**What:** Pay-per-use scraping services (cents per profile) that handle
+platform blocking for Instagram/TikTok. They would sit in the middle of
+Sherlock's fallback chain, before the dummy-account crawl.
+
+**Why deferred:** User does not want additional paid services for now.
+Sherlock's first version uses only free sources: website fetch, official
+Instagram Business Discovery API, yt-dlp/whisper, dummy-account crawl, and
+guided upload. If a paid tier is added later, show the estimated cost first
+(same pattern as the daily spend cap).
+
+---
+
 ## In-app usage menus / help per feature
 
 **What:** Menus or help screens inside the app itself explaining how to
