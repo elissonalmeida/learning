@@ -50,9 +50,12 @@ AppTest for the slot → creator hand-off. One real paid end-to-end run.
 
 ## Out of scope
 
-Bulk "create all posts of the month" (possible later); auto-publish.
+Bulk "create all posts" actions; auto-publish.
 
-## Open decisions for review
+## Decisions taken at review (2026-09-25)
 
-- Whether "create all for the week" is worth a first version.
+- Image creation isn't perfected yet, so v1 is a **per-slot "Criar este post" link only**, no bulk creation. Users create each post of the week individually and refine it until it's good enough to publish.
+
+## Open decisions for review (plan time)
+
 - How many stored tone preferences to feed into prompts before it gets noisy.

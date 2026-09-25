@@ -363,3 +363,15 @@ building, not whether the plumbing is hard.
 - **External-source mode (#10) is the most speculative item** — treat as
   a "someday, if it comes up" note rather than a real candidate until
   there's a concrete reason to seed content from outside sources.
+
+---
+
+## Deferred from calendar-cluster spec review
+
+- **Dummy-account crawl for Sherlock** (secondary account with a saved
+  Playwright login; opt-in, slow read-only pacing). Deferred; v1 uses
+  website fetch, Instagram Business Discovery, yt-dlp/whisper, guided upload.
+- **Calendar month-grid view.** v1 is a list view.
+- **Markdown export of a month/plan** (part of #5). Benefit unclear for now.
+- **Bulk "create all posts" from the calendar.** Image creation isn't
+  polished yet; v1 is one post per slot.

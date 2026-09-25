@@ -39,14 +39,14 @@ The user reacts in a refinement loop ("move the reel", "fewer offers this week",
 ## Niche dates research
 
 `niche_dates(niche, month) -> list[NicheDate]` with `date, name, why_it_matters (1 sentence), suggested_post_ideas, source, confidence`.
-- Astronomical data (moon phases, eclipses, equinoxes/solstices, planetary transits) computed with a library or reliable dataset where possible — **not** invented by the AI; the AI only interprets relevance for the niche.
-- Cultural/energetic dates (portals like 7/7, 8/8, seasonal celebrations) from AI research with `confidence` shown.
+- **Niche-driven, nothing hard-coded.** The examples in this doc (moon phases, portals, zodiac transits) are for a holistic niche only. For any niche the AI first decides which kinds of dates matter (e.g. holidays, awareness days, industry events, seasons, astrology for holistic) and then researches that month.
+- Where a date type is computable (astronomical events), use a reliable data source/library chosen at plan time rather than AI invention; the AI interprets relevance. Other dates come from AI research with `confidence` shown.
 - Each proposal is **accept / skip**; accepted ones become slots. Results cached per (niche, month).
 - Niche comes from the strategy's "who you are" answer; no hard-coded brand text in the engine (brand-pack pattern).
 
 ## UI (new tab **Calendário**, using `theme.py`)
 
-- Month grid with per-day badges (format icon/color by pillar) and a list toggle.
+- **v1: list view** (grouped by week, then day). The month grid with per-day badges is deferred (backlog).
 - Side panel for the selected slot: details, edit, status.
 - "Sugerir datas do nicho" panel listing niche-date proposals.
 - Gentle empty states ("This week is open — want me to suggest something light?").
@@ -79,10 +79,14 @@ One real paid end-to-end run before done.
 ## Out of scope
 
 Auto-publish; Stories content generation (backlog #4, follows this spec);
-Google Calendar sync; multi-profile.
+Month grid view (later); Markdown export of a month (backlog, low value for now); Google Calendar sync; multi-profile.
 
-## Open decisions for review
+## Decisions taken at review (2026-09-25)
 
-- Astronomy library/dataset choice.
-- Whether to ship the list view first and the grid second.
-- Export-to-Markdown of a month (backlog #5) — attach here or separate small spec.
+- List view first, grid later.
+- Markdown export dropped from this spec (benefit unclear now; stays in backlog #5).
+- Astronomy is only an example of a computable date source, chosen per niche at run time, not a fixed dependency.
+
+## Open decisions for review (plan time)
+
+- Which computable date sources/libraries to support for the first niches.

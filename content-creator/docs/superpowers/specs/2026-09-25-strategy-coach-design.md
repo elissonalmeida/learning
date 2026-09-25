@@ -87,12 +87,11 @@ handle/URL, YouTube URL, or uploaded files/pasted text.
 (`hook`, `cta`, `structure`) *described abstractly*, never verbatim content.
 These feed the draft prompts in the post creator later.
 
-**Free-only fallback chain** (each step tried in order, next on failure/block):
+**Free-only fallback chain, v1** (the dummy-account crawl is deferred, see backlog; each step tried in order, next on failure/block):
 1. Website: plain HTTP fetch + text extraction.
 2. Official Instagram **Business Discovery** API (needs the user's own Business/Creator account token; reads public captions/likes/comments of other Business/Creator accounts; no alt text).
 3. **yt-dlp + whisper** for public video metadata/transcripts (TikTok/YouTube/Reels). Already proven in OpenSquad.
-4. **Dummy-account crawl** with Playwright and a saved login of a *secondary* account (opt-in, off by default, slow read-only pacing, calm warning about platform rules; never the brand's main account). Playwright already a dependency (`render.py`).
-5. **Guided upload** — last resort. On a block Sherlock says so kindly and shows per-platform instructions to provide: PDF export, screenshots, pasted captions **and alt text/photo descriptions** (they carry extra information). Uploaded images are read with the vision model.
+4. **Guided upload** — last resort. On a block Sherlock says so kindly and shows per-platform instructions to provide: PDF export, screenshots, pasted captions **and alt text/photo descriptions** (they carry extra information). Uploaded images are read with the vision model.
 
 Every source result records which method worked and when. No paid scraping
 services in v1 (see backlog "Paid scraping services for Sherlock").
@@ -137,10 +136,13 @@ before calling it done** (repo convention).
 
 ## Out of scope
 
-Paid scrapers; multi-profile brands; auto-publishing; scheduling (Spec 2).
+Dummy-account crawl (backlog); paid scrapers; multi-profile brands; auto-publishing; scheduling (Spec 2).
 
-## Open decisions for review
+## Decisions taken at review (2026-09-25)
+
+- Dummy-account crawl is **deferred** to the backlog; v1 chain is website → Business Discovery → yt-dlp/whisper → guided upload.
+
+## Open decisions for review (plan time)
 
 - Exact Business Discovery setup steps and token handling (verify against current Meta docs at plan time).
-- Whether the dummy-account crawl ships in v1 or right after the other four steps.
 - Default posting-rhythm numbers per goal.

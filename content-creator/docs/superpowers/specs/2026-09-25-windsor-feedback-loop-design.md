@@ -20,7 +20,7 @@ integration, and use the numbers to (a) give the Coach real evidence, and
 
 Account: followers, reach, impressions, profile visits, follower change.
 Posts: date, format, caption, likes, comments, saves, shares, reach, engagement.
-Audience breakdown if available. Cached in SQLite (`analytics_snapshots`, `post_metrics`) with `fetched_at`; refreshed on demand and at most daily (no hammering).
+Audience breakdown if available. Cached in SQLite (`analytics_snapshots`, `post_metrics`) with `fetched_at`. A **"Atualizar dados" (Refresh) button** on the Resultados tab pulls fresh data on demand, so mid-month the user sees progress from work already done; the tab always shows "last updated <time>". Refresh is user-triggered (no background polling); repeated clicks in quick succession reuse the just-fetched data.
 
 ## Insights (computed, then explained gently)
 
@@ -42,7 +42,7 @@ sign to lean on them" — never "your cosmetics posts failed".
 
 ## Dashboard (new tab **Resultados**)
 
-Simple, calm view: a few headline numbers, trend arrows, best posts, and the
+A dedicated tab the user can return to any time. Simple, calm view: a few headline numbers, trend arrows, best posts, and the
 monthly recap. Uses `theme.py`. Missing data → friendly explanation and how to
 connect, never an error wall.
 
@@ -68,8 +68,11 @@ user's real Windsor connection** before done.
 
 Multiple profiles/networks (backlog); autonomous decisions without user approval; paid third-party analytics.
 
-## Open decisions for review
+## Decisions taken at review (2026-09-25)
+
+- Windsor data lives in its **own tab** (Resultados) with a manual Refresh button; the monthly recap is a section of that tab.
+
+## Open decisions for review (plan time)
 
 - Which Windsor endpoint/fields (verify at plan time).
-- Refresh cadence and how much history to import first.
-- Whether the monthly recap is a tab section or a dismissible card.
+- How much history to import first and the short-interval refresh reuse window.
