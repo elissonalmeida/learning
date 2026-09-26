@@ -42,11 +42,25 @@ def test_discovery_builds_text_from_captions_and_metrics():
 def test_discovery_needs_upload_without_credentials():
     result = gather.gather_instagram_discovery("@outra", None, None, get_json=lambda u: DISCOVERY)
     assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.DISCOVERY_NOT_CONFIGURED_REASON
+    assert "Business Discovery" not in result.reason
 
 
 def test_discovery_needs_upload_when_username_cannot_be_parsed():
     result = gather.gather_instagram_discovery("https://exemplo.pt", "1", "t", get_json=lambda u: DISCOVERY)
     assert isinstance(result, models.NeedsUpload)
+
+
+def test_discovery_post_link_gets_a_profile_link_reason_without_jargon():
+    calls = []
+    result = gather.gather_instagram_discovery(
+        "https://www.instagram.com/p/abc123/", "1", "t", get_json=lambda u: calls.append(u)
+    )
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.DISCOVERY_NOT_A_PROFILE_REASON
+    assert "Business Discovery" not in result.reason
+    assert "perfil" in result.reason.lower()
+    assert not calls
 
 
 def test_discovery_needs_upload_on_api_error_with_fixed_reason():

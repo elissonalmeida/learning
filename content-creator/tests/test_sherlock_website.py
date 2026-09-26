@@ -1,3 +1,5 @@
+import pytest
+
 from sherlock import gather, models
 
 
@@ -98,7 +100,10 @@ def test_http_fetch_reads_a_bounded_number_of_bytes(monkeypatch):
     calls = {}
 
     class Resp:
-        headers = type("H", (), {"get_content_charset": lambda self: None})()
+        headers = type("H", (), {
+            "get_content_charset": lambda self: None,
+            "get_content_type": lambda self: "text/html",
+        })()
 
         def read(self, n=-1):
             calls["n"] = n
@@ -128,3 +133,76 @@ def test_gather_website_strips_whitespace_around_url():
 def test_detect_platform_text_mentioning_instagram_is_plain_text():
     # Deliberate: only a URL or @handle counts as a source, not prose that mentions a site.
     assert models.detect_platform("vê instagram.com para exemplos") == "text"
+
+
+def test_gather_website_keeps_original_input_as_source_but_fetches_normalized():
+    result = gather.gather_website("  www.exemplo.pt  ", fetch=lambda url: _long_html())
+    assert result.source == "www.exemplo.pt"
+
+
+def test_gather_website_rejects_non_http_schemes():
+    def fetch_should_not_run(url):
+        raise AssertionError("fetch must not run for a blocked scheme")
+
+    for bad in ("file:///etc/passwd", "ftp://exemplo.pt/x"):
+        result = gather.gather_website(bad, fetch=fetch_should_not_run)
+        assert isinstance(result, models.NeedsUpload)
+        assert result.reason == gather.WEBSITE_BLOCKED_REASON
+
+
+def test_gather_website_rejects_localhost_and_literal_private_ips():
+    def fetch_should_not_run(url):
+        raise AssertionError("fetch must not run for a blocked host")
+
+    for bad in ("http://localhost", "http://127.0.0.1", "http://192.168.1.1", "http://[::1]"):
+        result = gather.gather_website(bad, fetch=fetch_should_not_run)
+        assert isinstance(result, models.NeedsUpload)
+        assert result.reason == gather.WEBSITE_BLOCKED_REASON
+
+
+def test_gather_website_rejects_domain_resolving_to_a_private_ip():
+    def fetch_should_not_run(url):
+        raise AssertionError("fetch must not run for a host resolving to a private IP")
+
+    result = gather.gather_website(
+        "http://internal.exemplo.pt", fetch=fetch_should_not_run, resolve=lambda host: "10.0.0.5"
+    )
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.WEBSITE_BLOCKED_REASON
+
+
+def test_gather_website_allows_a_public_host_resolving_normally():
+    result = gather.gather_website(
+        "https://exemplo.pt", fetch=lambda url: _long_html(), resolve=lambda host: "93.184.216.34"
+    )
+    assert isinstance(result, models.GatherResult)
+
+
+def test_gather_website_returns_needs_upload_for_non_html_content_type():
+    def fetch(url):
+        raise gather._UnsupportedContentType("application/pdf")
+
+    result = gather.gather_website("https://exemplo.pt/ficheiro.pdf", fetch=fetch)
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.WEBSITE_BAD_CONTENT_TYPE_REASON
+
+
+def test_http_fetch_rejects_non_text_content_type(monkeypatch):
+    class Resp:
+        headers = type("H", (), {
+            "get_content_charset": lambda self: None,
+            "get_content_type": lambda self: "application/pdf",
+        })()
+
+        def read(self, n=-1):
+            return b"%PDF-1.4"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    monkeypatch.setattr(gather.urllib.request, "urlopen", lambda *a, **k: Resp())
+    with pytest.raises(gather._UnsupportedContentType):
+        gather._http_fetch("https://exemplo.pt/ficheiro.pdf")

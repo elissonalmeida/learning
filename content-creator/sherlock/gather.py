@@ -1,5 +1,7 @@
+import ipaddress
 import json
 import re
+import socket
 import subprocess
 import tempfile
 import urllib.parse
@@ -12,6 +14,12 @@ MAX_CHARS = 20000
 MIN_CHARS = 200
 MAX_FETCH = 2_000_000  # max bytes read from a socket/response; also max chars of website html kept
 WEBSITE_FAIL_REASON = "Não consegui abrir esta página neste momento."
+WEBSITE_BLOCKED_REASON = "Esta hiperligação não pode ser aberta a partir daqui."
+WEBSITE_BAD_CONTENT_TYPE_REASON = "Esta hiperligação não leva a uma página de texto legível."
+
+
+class _UnsupportedContentType(Exception):
+    """Raised by a fetch function when the response isn't HTML/text."""
 
 
 class _TextExtractor(HTMLParser):
@@ -42,24 +50,49 @@ class _TextExtractor(HTMLParser):
 def _http_fetch(url, timeout=20):
     request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; ContentCreator/1.0)"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
+        content_type = (response.headers.get_content_type() or "").lower()
+        if content_type and not content_type.startswith("text/"):
+            raise _UnsupportedContentType(content_type)
         charset = response.headers.get_content_charset() or "utf-8"
         return response.read(MAX_FETCH).decode(charset, errors="replace")
 
 
-def gather_website(url, fetch=_http_fetch):
-    url = url.strip()
-    if "://" not in url:
-        url = "https://" + url
+def _is_blocked_host(hostname, resolve):
+    if not hostname:
+        return True
+    host = hostname.lower().rstrip(".")
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
     try:
-        html = fetch(url)[:MAX_FETCH]
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        try:
+            ip = ipaddress.ip_address(resolve(host))
+        except Exception:  # can't resolve here: let the real fetch succeed or fail on its own
+            return False
+    return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast
+
+
+def gather_website(url, fetch=_http_fetch, resolve=socket.gethostbyname):
+    original = url.strip()
+    normalized = original
+    if "://" not in normalized:
+        normalized = "https://" + normalized
+    parsed = urllib.parse.urlparse(normalized)
+    if parsed.scheme not in ("http", "https") or _is_blocked_host(parsed.hostname, resolve):
+        return NeedsUpload(original, WEBSITE_BLOCKED_REASON, upload_instructions("website"))
+    try:
+        html = fetch(normalized)[:MAX_FETCH]
+    except _UnsupportedContentType:
+        return NeedsUpload(original, WEBSITE_BAD_CONTENT_TYPE_REASON, upload_instructions("website"))
     except Exception:  # network errors, HTTP errors, timeouts: all mean "ask for an upload"
-        return NeedsUpload(url, WEBSITE_FAIL_REASON, upload_instructions("website"))
+        return NeedsUpload(original, WEBSITE_FAIL_REASON, upload_instructions("website"))
     parser = _TextExtractor()
     parser.feed(html)
     text = " ".join(parser.parts)[:MAX_CHARS]
     if len(text) < MIN_CHARS:
-        return NeedsUpload(url, "A página quase não tem texto legível.", upload_instructions("website"))
-    return GatherResult(url, "website", text)
+        return NeedsUpload(original, "A página quase não tem texto legível.", upload_instructions("website"))
+    return GatherResult(original, "website", text)
 
 
 def _video_text(info):
@@ -150,6 +183,10 @@ _DISCOVERY_FIELDS = (
 DISCOVERY_FAIL_REASON = "Não consegui ler este perfil pelo Instagram neste momento."
 DISCOVERY_BAD_USERNAME_REASON = "Este nome de utilizador do Instagram não parece válido."
 DISCOVERY_EMPTY_REASON = "Este perfil quase não tem publicações legíveis."
+DISCOVERY_NOT_CONFIGURED_REASON = "A ligação automática ao Instagram ainda não está configurada."
+DISCOVERY_NOT_A_PROFILE_REASON = (
+    "Este link parece ser de uma publicação, não de um perfil. Podes enviar o link do perfil?"
+)
 _USERNAME_RE = re.compile(r"^[A-Za-z0-9._]{1,30}$")
 
 
@@ -160,12 +197,10 @@ def _http_get_json(url, timeout=20):
 
 def gather_instagram_discovery(source, ig_user_id, access_token, get_json=_http_get_json):
     username = instagram_username(source)
-    if not (username and ig_user_id and access_token):
-        return NeedsUpload(
-            source,
-            "A ligação opcional ao Instagram (Business Discovery) não está configurada.",
-            upload_instructions("instagram"),
-        )
+    if not username:
+        return NeedsUpload(source, DISCOVERY_NOT_A_PROFILE_REASON, upload_instructions("instagram"))
+    if not (ig_user_id and access_token):
+        return NeedsUpload(source, DISCOVERY_NOT_CONFIGURED_REASON, upload_instructions("instagram"))
     if not _USERNAME_RE.match(username):
         return NeedsUpload(source, DISCOVERY_BAD_USERNAME_REASON, upload_instructions("instagram"))
     fields = _DISCOVERY_FIELDS.format(username=username)
