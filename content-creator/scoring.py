@@ -14,40 +14,51 @@ GOAL_MENU = {
 
 EVIDENCE_LEVELS = ("data", "pattern", "reasoned")
 
+ERR_GOALS_NOT_A_LIST = "A pontuação dos objectivos não veio como uma lista."
+ERR_ITEM_INVALID_FORMAT = "Um objectivo pontuado tem formato inválido."
+ERR_UNKNOWN_GOAL = "Objectivo desconhecido: {goal!r}."
+ERR_DUPLICATE_GOAL = "Objectivo repetido: {goal!r}."
+ERR_SCORE_RANGE = "A pontuação tem de estar entre 0 e 100."
+ERR_INVALID_EVIDENCE = "O nível de evidência é inválido."
+ERR_MISSING_REASON = "Cada objectivo precisa de pelo menos uma razão."
+ERR_MISSING_METRIC_TARGET = "Cada objectivo precisa de métrica e meta."
+ERR_MISSING_CHOSEN_GOAL = "Nem todos os objectivos escolhidos vieram pontuados."
+ERR_NO_GOALS_CHOSEN = "Escolhe pelo menos um objectivo antes de continuar."
+
 
 def validate_scored_goals(items, allowed_goals):
     if not isinstance(items, list) or not items:
-        raise ai.InvalidAIResponseError("A pontuação dos objectivos não veio como uma lista.")
+        raise ai.InvalidAIResponseError(ERR_GOALS_NOT_A_LIST)
     seen = set()
     for item in items:
         if not isinstance(item, dict):
-            raise ai.InvalidAIResponseError("Um objectivo pontuado tem formato inválido.")
+            raise ai.InvalidAIResponseError(ERR_ITEM_INVALID_FORMAT)
         if item.get("goal") not in allowed_goals:
-            raise ai.InvalidAIResponseError(f"Objectivo desconhecido: {item.get('goal')!r}.")
+            raise ai.InvalidAIResponseError(ERR_UNKNOWN_GOAL.format(goal=item.get("goal")))
         if item["goal"] in seen:
-            raise ai.InvalidAIResponseError(f"Objectivo repetido: {item['goal']!r}.")
+            raise ai.InvalidAIResponseError(ERR_DUPLICATE_GOAL.format(goal=item["goal"]))
         seen.add(item["goal"])
         score = item.get("score")
         if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0 <= score <= 100:
-            raise ai.InvalidAIResponseError("A pontuação tem de estar entre 0 e 100.")
+            raise ai.InvalidAIResponseError(ERR_SCORE_RANGE)
         if item.get("evidence") not in EVIDENCE_LEVELS:
-            raise ai.InvalidAIResponseError("O nível de evidência é inválido.")
+            raise ai.InvalidAIResponseError(ERR_INVALID_EVIDENCE)
         reasons = item.get("reasons")
         if not isinstance(reasons, list) or not reasons or not all(isinstance(r, str) for r in reasons):
-            raise ai.InvalidAIResponseError("Cada objectivo precisa de pelo menos uma razão.")
+            raise ai.InvalidAIResponseError(ERR_MISSING_REASON)
         if not isinstance(item.get("metric"), str) or not isinstance(item.get("target"), str):
-            raise ai.InvalidAIResponseError("Cada objectivo precisa de métrica e meta.")
+            raise ai.InvalidAIResponseError(ERR_MISSING_METRIC_TARGET)
     if seen != set(allowed_goals):
-        raise ai.InvalidAIResponseError("Nem todos os objectivos escolhidos vieram pontuados.")
+        raise ai.InvalidAIResponseError(ERR_MISSING_CHOSEN_GOAL)
     return items
 
 
 def score_goals(client, profile, evidence):
     if not profile["goals"]:
-        raise ValueError("Escolhe pelo menos um objectivo antes de continuar.")
+        raise ValueError(ERR_NO_GOALS_CHOSEN)
     unknown = [key for key in profile["goals"] if key not in GOAL_MENU]
     if unknown:
-        raise ValueError(f"Objectivo desconhecido: {unknown[0]!r}.")
+        raise ValueError(ERR_UNKNOWN_GOAL.format(goal=unknown[0]))
     prompt = ai.render_prompt(ai.load_prompt("score_goals"), tone_rule=GENTLE_TONE_RULE)
     goal_lines = "\n".join(
         f"- {key}: {GOAL_MENU[key]['label']} (métrica base: {GOAL_MENU[key]['metric']})"

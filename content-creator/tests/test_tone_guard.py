@@ -1,13 +1,24 @@
 import tone_guard
 from sherlock import gather, models
+import coach_store
 import scoring
+
+
+def _constants_ending_in(module, suffix):
+    return [getattr(module, name) for name in dir(module) if name.isupper() and name.endswith(suffix)]
 
 
 def _all_canned_strings():
     strings = list(models._UPLOAD_INSTRUCTIONS.values())
-    for name in dir(gather):
-        if name.isupper() and name.endswith("_REASON"):
-            strings.append(getattr(gather, name))
+    strings += _constants_ending_in(gather, "_REASON")
+    strings += _constants_ending_in(scoring, "_REASON")
+    strings += _constants_ending_in(scoring, "_MESSAGE")
+    for name in dir(scoring):
+        if name.isupper() and name.startswith("ERR_"):
+            strings.append(getattr(scoring, name))
+    for name in dir(coach_store):
+        if name.isupper() and name.startswith("ERR_"):
+            strings.append(getattr(coach_store, name))
     for goal in scoring.GOAL_MENU.values():
         strings.append(goal["label"])
         strings.append(goal["metric"])
@@ -40,3 +51,8 @@ def test_all_canned_user_facing_strings_are_gentle():
     assert len(strings) >= 10  # sanity check that the collection actually found the constants
     for text in strings:
         assert tone_guard.find_harsh_words(text) == [], f"harsh words in: {text!r}"
+
+
+def test_no_canned_gather_reason_mentions_yt_dlp():
+    for reason in _constants_ending_in(gather, "_REASON"):
+        assert "yt-dlp" not in reason.lower()

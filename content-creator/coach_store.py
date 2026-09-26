@@ -5,6 +5,14 @@ SECTION_KINDS = ("goals", "offers", "funnel", "pillars", "authority", "rhythm")
 SECTION_STATES = ("draft", "accepted", "revisit")
 SECTION_EVIDENCE_LEVELS = ("data", "pattern", "reasoned")
 
+# These are internal/developer-facing validation errors (never shown to the end
+# user), but are named constants so the tone sweep in test_tone_guard.py can
+# still cover them.
+ERR_UNKNOWN_KIND = "Unknown section kind: {kind!r}"
+ERR_UNKNOWN_STATE = "Unknown section state: {state!r}"
+ERR_UNKNOWN_EVIDENCE = "Unknown section evidence: {evidence!r}"
+ERR_SECTION_NOT_FOUND = "No section {kind!r} for strategy {strategy_id!r}"
+
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
@@ -99,11 +107,11 @@ def latest_strategy(conn, brand_pack, status=None):
 
 def set_section(conn, strategy_id, kind, content, state="draft", evidence="reasoned"):
     if kind not in SECTION_KINDS:
-        raise ValueError(f"Unknown section kind: {kind}")
+        raise ValueError(ERR_UNKNOWN_KIND.format(kind=kind))
     if state not in SECTION_STATES:
-        raise ValueError(f"Unknown section state: {state}")
+        raise ValueError(ERR_UNKNOWN_STATE.format(state=state))
     if evidence not in SECTION_EVIDENCE_LEVELS:
-        raise ValueError(f"Unknown section evidence: {evidence}")
+        raise ValueError(ERR_UNKNOWN_EVIDENCE.format(evidence=evidence))
     conn.execute(
         "INSERT INTO strategy_sections (strategy_id, kind, content_json, state, evidence, updated_at) "
         "VALUES (?, ?, ?, ?, ?, ?) "
@@ -128,21 +136,21 @@ def get_sections(conn, strategy_id):
 
 def set_section_state(conn, strategy_id, kind, state):
     if kind not in SECTION_KINDS:
-        raise ValueError(f"Unknown section kind: {kind}")
+        raise ValueError(ERR_UNKNOWN_KIND.format(kind=kind))
     if state not in SECTION_STATES:
-        raise ValueError(f"Unknown section state: {state}")
+        raise ValueError(ERR_UNKNOWN_STATE.format(state=state))
     cursor = conn.execute(
         "UPDATE strategy_sections SET state = ?, updated_at = ? WHERE strategy_id = ? AND kind = ?",
         (state, _now(), strategy_id, kind),
     )
     if cursor.rowcount == 0:
-        raise LookupError(f"No section {kind!r} for strategy {strategy_id!r}")
+        raise LookupError(ERR_SECTION_NOT_FOUND.format(kind=kind, strategy_id=strategy_id))
     conn.commit()
 
 
 def log_decision(conn, strategy_id, section_kind, action, user_reason=None):
     if section_kind not in SECTION_KINDS:
-        raise ValueError(f"Unknown section kind: {section_kind}")
+        raise ValueError(ERR_UNKNOWN_KIND.format(kind=section_kind))
     conn.execute(
         "INSERT INTO strategy_decisions (strategy_id, section_kind, action, user_reason, created_at) "
         "VALUES (?, ?, ?, ?, ?)",
