@@ -250,3 +250,97 @@ def test_carousel_preview_renders_when_all_slides_approved(tmp_path, monkeypatch
     at.run()
 
     assert not at.exception
+
+
+def _idea_with_two_slide_images(tmp_path, monkeypatch, with_background_for):
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    folder = tmp_path / "images" / "2026-09-26_ritual"
+    folder.mkdir(parents=True)
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
+    db.update_idea_status(conn, idea_id, "approved")
+    db.set_idea_image_folder(conn, idea_id, folder.name)
+    db.create_draft(conn, idea_id, 0, "Legenda de teste", ["Slide 1", "Slide 2"])
+    for index in (0, 1):
+        slide = folder / f"slide-{index:02d}.png"
+        slide.write_bytes(_TINY_PNG_BYTES)
+        db.create_slide_image(conn, idea_id, index, f"prompt {index}", str(slide), 0.05)
+    for index in with_background_for:
+        (folder / f"slide-{index:02d}-bg.png").write_bytes(_TINY_PNG_BYTES)
+    conn.close()
+    return db_path, idea_id
+
+
+def test_refazer_layout_appears_only_when_the_raw_image_was_saved(tmp_path, monkeypatch):
+    _idea_with_two_slide_images(tmp_path, monkeypatch, with_background_for=[0])
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    assert not at.exception
+    rerender = [b for b in at.button if b.label == "Refazer layout"]
+    assert [b.key for b in rerender] == ["rerender_0"]
+
+
+def test_refazer_layout_adds_a_free_new_version_of_the_last_slide(tmp_path, monkeypatch):
+    import render
+
+    db_path, idea_id = _idea_with_two_slide_images(tmp_path, monkeypatch, with_background_for=[1])
+    layouts = []
+    monkeypatch.setattr(
+        render, "build_slide_html",
+        lambda text, image, brand, role, is_last=False: layouts.append((role, is_last)) or "<html></html>",
+    )
+    monkeypatch.setattr(render, "render_png", lambda html: _TINY_PNG_BYTES)
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+    at.button(key="rerender_1").click().run()
+
+    assert not at.exception
+    assert layouts == [("card", True)]
+    conn = db.get_connection(str(db_path))
+    rows = [r for r in db.list_slide_images(conn, idea_id) if r["slide_index"] == 1]
+    assert len(rows) == 2
+    assert rows[-1]["cost_usd"] == 0
+    assert conn.execute("SELECT COUNT(*) FROM api_calls").fetchone()[0] == 0
+    conn.close()
+
+
+def test_gerar_imagem_tells_the_layout_which_slide_is_the_last(tmp_path, monkeypatch):
+    import image_gen
+    import render
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
+    db.update_idea_status(conn, idea_id, "approved")
+    db.create_draft(conn, idea_id, 0, "Legenda de teste", ["Slide 1", "Slide 2", "Slide 3"])
+    conn.close()
+
+    layouts = []
+    monkeypatch.setattr(image_gen, "generate_image", lambda client, prompt: (_TINY_PNG_BYTES, 1, 1, 0.01))
+    monkeypatch.setattr(
+        render, "build_slide_html",
+        lambda text, image, brand, role, is_last=False: layouts.append((text, is_last)) or "<html></html>",
+    )
+    monkeypatch.setattr(render, "render_png", lambda html: _TINY_PNG_BYTES)
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+    at.button(key="generate_1").click().run()
+    at.button(key="generate_2").click().run()
+
+    assert not at.exception
+    assert layouts == [("Slide 2", False), ("Slide 3", True)]

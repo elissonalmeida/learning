@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import streamlit as st
 
 import ai
@@ -205,13 +207,25 @@ with tab_images:
                 st.image(existing["file_path"], width=300)
                 if existing["status"] == "approved":
                     st.success("Aprovado")
-                col1, col2 = st.columns(2)
+                col1, col2, col3 = st.columns(3)
                 if existing["status"] != "approved" and col1.button("Aprovar", key=f"approve_{i}"):
                     pipeline.approve_slide_image(conn, existing["id"])
                     pipeline.maybe_mark_images_ready(conn, idea["id"], len(slides))
                     st.rerun()
                 if col2.button("Gerar novamente", key=f"regen_{i}"):
                     st.session_state[f"show_prompt_{idea['id']}_{i}"] = True
+                background = Path(existing["file_path"]).with_name(f"slide-{i:02d}-bg.png")
+                if background.is_file() and col3.button(
+                    "Refazer layout", key=f"rerender_{i}",
+                    help="Volta a compor o slide com a mesma imagem, sem custo.",
+                ):
+                    run_with_progress(
+                        lambda on_step: pipeline.rerender_slide_image(
+                            conn, idea, i, role, slide_text, images_root, i == len(slides) - 1,
+                            on_step=on_step,
+                        ),
+                    )
+                    st.rerun()
 
             if not existing or st.session_state.get(f"show_prompt_{idea['id']}_{i}"):
                 prompt_key = f"prompt_{idea['id']}_{i}"
@@ -227,7 +241,7 @@ with tab_images:
                             lambda on_step: pipeline.generate_slide_image(
                                 gemini_client, conn, idea, i, role, slide_text,
                                 st.session_state[prompt_key], images_root, cfg.max_daily_spend_usd,
-                                on_step=on_step,
+                                on_step=on_step, is_last=i == len(slides) - 1,
                             ),
                         )
                     except pipeline.DailyBudgetExceededError as e:
