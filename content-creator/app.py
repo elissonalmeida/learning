@@ -155,6 +155,9 @@ with tab_new:
             except pipeline.DailyBudgetExceededError as e:
                 st.error(str(e))
             else:
+                st.session_state["reviewed_idea_select"] = (
+                    f"#{chosen_idea['id']} — {chosen_idea['topic']}"
+                )
                 st.rerun()
     else:
         st.info("Sem ideias pendentes. Cria uma acima.")

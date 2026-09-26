@@ -88,6 +88,71 @@ def test_reviewed_draft_survives_reload_and_aprovar_updates_status(tmp_path, mon
     assert any("Sem rascunhos à espera de decisão" in el.value for el in at.info)
 
 
+def test_generating_a_draft_selects_it_in_the_reviewed_section(tmp_path, monkeypatch):
+    import ai
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    # The idea we're about to draft was created FIRST (older created_at); a
+    # second idea, created and marked "reviewed" AFTER it, has a newer
+    # created_at. list_ideas() sorts "reviewed" by created_at DESC, so once
+    # the first idea also becomes "reviewed", plain creation-time sorting
+    # would still put the older one second — the selectbox must not rely on
+    # that sort order to find the just-generated draft.
+    new_idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ideia nova")
+    old_idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ideia antiga")
+    db.update_idea_status(conn, old_idea_id, "reviewed")
+    db.create_draft(conn, old_idea_id, 0, "Legenda antiga", ["Slide antigo"])
+    conn.close()
+
+    monkeypatch.setattr(
+        ai, "generate_draft",
+        lambda client, topic, tone, pillar, brand_pack: (
+            {"caption": "Legenda nova", "slides": ["Slide novo"]}, 10, 10, 0.001,
+        ),
+    )
+    monkeypatch.setattr(
+        ai, "critique_draft", lambda client, draft, brand_pack: ([], 10, 10, 0.001),
+    )
+
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+    assert not at.exception
+
+    gerar_buttons = [b for b in at.button if b.label == "Gerar rascunho"]
+    assert len(gerar_buttons) == 1
+    gerar_buttons[0].click().run()
+
+    assert not at.exception
+    reviewed_select = at.selectbox(key="reviewed_idea_select")
+    assert reviewed_select.value == f"#{new_idea_id} — ideia nova"
+
+    # The review section renders the caption verbatim (st.write(caption));
+    # the Biblioteca tab renders "Ronda N: <caption>..." — exclude that so
+    # this only looks at what the review section is showing.
+    review_section_captions = [
+        el.value for el in at.markdown
+        if "Ronda" not in el.value and ("Legenda nova" in el.value or "Legenda antiga" in el.value)
+    ]
+    assert any("Legenda nova" in v for v in review_section_captions)
+    assert not any("Legenda antiga" in v for v in review_section_captions)
+
+    aprovar_buttons = [b for b in at.button if b.key == f"approve_draft_{new_idea_id}"]
+    assert len(aprovar_buttons) == 1
+    aprovar_buttons[0].click().run()
+
+    conn2 = db.get_connection(str(db_path))
+    assert db.get_idea(conn2, new_idea_id)["status"] == "approved"
+    assert db.get_idea(conn2, old_idea_id)["status"] == "reviewed"
+    conn2.close()
+
+
 def test_arquivar_hides_the_button_in_the_same_interaction(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
