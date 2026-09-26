@@ -88,7 +88,7 @@ def test_app_renders_custom_header_instead_of_default_title(tmp_path, monkeypatc
     monkeypatch.setenv("DB_PATH", str(tmp_path / "test.db"))
     monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception

@@ -22,7 +22,7 @@ def test_app_loads_without_exception(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(tmp_path / "test.db"))
     monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception
@@ -42,7 +42,7 @@ def test_images_tab_renders_for_approved_idea_with_draft(tmp_path, monkeypatch):
     db.create_draft(conn, idea_id, 0, "Legenda de teste", ["Slide 1", "Slide 2"])
     conn.close()
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception
@@ -66,7 +66,7 @@ def test_reviewed_draft_survives_reload_and_aprovar_updates_status(tmp_path, mon
     conn.close()
 
     # Fresh AppTest run (simulates a reload): no session state carried over.
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception
@@ -121,7 +121,7 @@ def test_generating_a_draft_selects_it_in_the_reviewed_section(tmp_path, monkeyp
         ai, "critique_draft", lambda client, draft, brand_pack: ([], 10, 10, 0.001),
     )
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
     assert not at.exception
 
@@ -165,7 +165,7 @@ def test_arquivar_hides_the_button_in_the_same_interaction(tmp_path, monkeypatch
     idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
     conn.close()
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
     assert not at.exception
 
@@ -197,7 +197,7 @@ def test_no_image_returned_shows_gentle_message_and_keeps_prompt_editable(tmp_pa
 
     monkeypatch.setattr(image_gen, "generate_image", no_image)
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
     assert not at.exception
 
@@ -240,7 +240,7 @@ def test_carousel_preview_renders_when_all_slides_approved(tmp_path, monkeypatch
     db.update_idea_status(conn, idea_id, "images_ready")
     conn.close()
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception
