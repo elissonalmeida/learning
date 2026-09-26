@@ -70,7 +70,14 @@ def score_goals(client, profile, evidence):
         f"\n\n## Evidências\n{json.dumps(evidence, ensure_ascii=False)}"
     )
     text, tokens_in, tokens_out = ai._call_claude(client, prompt)
-    items = validate_scored_goals(ai._parse_json_response(text), list(profile["goals"]))
+    cost = ai.calculate_cost(tokens_in, tokens_out)
+    try:
+        items = validate_scored_goals(ai._parse_json_response(text), list(profile["goals"]))
+    except ai.InvalidAIResponseError as e:
+        # The call above already succeeded (and was billed): attach its usage to the
+        # error so pipeline._invoke can still log the spend before re-raising.
+        e.tokens_in, e.tokens_out, e.cost = tokens_in, tokens_out, cost
+        raise
     has_windsor = bool(evidence.get("windsor"))
     has_findings = bool(evidence.get("findings"))
     for item in items:
@@ -81,4 +88,4 @@ def score_goals(client, profile, evidence):
     items.sort(key=lambda i: i["score"], reverse=True)
     for rank, item in enumerate(items, start=1):
         item["rank"] = rank
-    return items, tokens_in, tokens_out, ai.calculate_cost(tokens_in, tokens_out)
+    return items, tokens_in, tokens_out, cost

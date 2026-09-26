@@ -30,6 +30,16 @@ def _invoke(conn, idea_id, daily_cap_usd, function_name, ai_call, on_step=None):
     try:
         result, tokens_in, tokens_out, cost = ai_call()
     except Exception as e:
+        # The AI call itself can succeed (and be billed) even when the answer it
+        # returns fails validation afterwards. If the exception carries the usage
+        # of that already-paid-for call (see ai.InvalidAIResponseError), log it
+        # before re-raising so the daily cap still accounts for it.
+        error_cost = getattr(e, "cost", None)
+        if error_cost:
+            db.log_api_call(
+                conn, function_name, getattr(e, "tokens_in", 0), getattr(e, "tokens_out", 0),
+                error_cost, idea_id=idea_id,
+            )
         if on_step:
             on_step(function_name, "error", str(e))
         raise

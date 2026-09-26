@@ -285,3 +285,40 @@ def test_on_step_defaults_to_none_and_does_not_break_existing_callers(conn, idea
         brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
     )
     assert draft["caption"] == "v0"
+
+
+def test_invoke_logs_cost_when_a_successful_call_fails_validation_afterwards(conn):
+    """The AI call itself can succeed (and be billed) even though the answer it
+    returns is rejected by validation. If the exception carries the usage of that
+    already-paid-for call (ai.InvalidAIResponseError's tokens_in/tokens_out/cost),
+    _invoke must still log it before re-raising, or the daily cap under-counts."""
+    error = ai.InvalidAIResponseError("resposta inválida", tokens_in=300, tokens_out=120, cost=0.0034)
+
+    def extract_topics(client, reference_text, brand_pack):
+        raise error
+
+    fake_ai = SimpleNamespace(extract_topics=extract_topics)
+    assert db.get_spend_today(conn) == 0
+
+    with pytest.raises(ai.InvalidAIResponseError):
+        pipeline.run_extraction(
+            client=None, conn=conn, reference_text="texto qualquer",
+            brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+        )
+
+    assert db.get_spend_today(conn) == pytest.approx(0.0034)
+
+
+def test_invoke_does_not_log_when_the_call_fails_without_usage_info(conn):
+    """A plain exception (network error, etc.) has no cost attribute: nothing to log."""
+
+    def extract_topics(client, reference_text, brand_pack):
+        raise RuntimeError("network down")
+
+    fake_ai = SimpleNamespace(extract_topics=extract_topics)
+    with pytest.raises(RuntimeError):
+        pipeline.run_extraction(
+            client=None, conn=conn, reference_text="texto qualquer",
+            brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+        )
+    assert db.get_spend_today(conn) == 0

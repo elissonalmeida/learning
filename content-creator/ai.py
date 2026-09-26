@@ -28,7 +28,15 @@ class ResponseTruncatedError(Exception):
 
 
 class InvalidAIResponseError(Exception):
-    pass
+    """Optionally carries the token usage/cost of the AI call that produced the
+    invalid response, so a caller like pipeline._invoke can still log the spend
+    before re-raising (the call was paid for even though its answer was rejected)."""
+
+    def __init__(self, message, tokens_in=0, tokens_out=0, cost=0.0):
+        super().__init__(message)
+        self.tokens_in = tokens_in
+        self.tokens_out = tokens_out
+        self.cost = cost
 
 
 _JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL)

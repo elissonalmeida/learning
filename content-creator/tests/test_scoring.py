@@ -106,6 +106,18 @@ def test_score_goals_rejects_unknown_goal_key_without_calling_the_client():
     client.messages.create.assert_not_called()
 
 
+def test_score_goals_attaches_usage_to_the_error_when_validation_fails():
+    # Missing the "get_conversations" goal: validate_scored_goals rejects this
+    # after a successful (and billed) Claude call. The raised error must carry
+    # that call's usage so pipeline._invoke can still log the spend.
+    payload = [{"goal": "build_authority", "score": 70, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}]
+    with pytest.raises(ai.InvalidAIResponseError) as excinfo:
+        scoring.score_goals(fake_client(payload), PROFILE, EVIDENCE)
+    assert excinfo.value.tokens_in == 300
+    assert excinfo.value.tokens_out == 120
+    assert excinfo.value.cost > 0
+
+
 def test_score_goals_prompt_includes_the_chosen_goals_menu_lines():
     payload = [
         {"goal": "build_authority", "score": 1, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"},
