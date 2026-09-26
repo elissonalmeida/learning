@@ -76,19 +76,35 @@ def _video_text(info):
     return "\n".join(lines)
 
 
+VIDEO_BAD_SOURCE_REASON = "Este vídeo só pode ser lido a partir de um link que comece por http:// ou https://."
+VIDEO_FAIL_REASON = "Não consegui ler este vídeo neste momento."
+VIDEO_TIMEOUT_REASON = "Este vídeo está a demorar demasiado tempo a carregar; tenta novamente daqui a pouco."
+METADATA_TIMEOUT = 120
+AUDIO_TIMEOUT = 600
+
+
 def gather_video(url, run=subprocess.run, transcribe=None):
     kind = detect_platform(url)
+    if not url.lower().startswith(("http://", "https://")):
+        return NeedsUpload(url, VIDEO_BAD_SOURCE_REASON, upload_instructions(kind))
     try:
-        proc = run(["yt-dlp", "--dump-single-json", "--skip-download", url], capture_output=True, text=True, encoding="utf-8", errors="replace")
+        proc = run(
+            ["yt-dlp", "--dump-single-json", "--skip-download", "--no-playlist", "--playlist-items", "1", "--", url],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=METADATA_TIMEOUT,
+        )
     except FileNotFoundError:
         return NeedsUpload(url, "O yt-dlp não está instalado.", upload_instructions(kind))
+    except subprocess.TimeoutExpired:
+        return NeedsUpload(url, VIDEO_TIMEOUT_REASON, upload_instructions(kind))
     if proc.returncode != 0:
-        reason = (proc.stderr or "").strip()[:200] or "O yt-dlp não conseguiu ler este vídeo."
-        return NeedsUpload(url, reason, upload_instructions(kind))
+        return NeedsUpload(url, VIDEO_FAIL_REASON, upload_instructions(kind))
     try:
-        text = _video_text(json.loads(proc.stdout))
+        info = json.loads(proc.stdout)
     except (TypeError, ValueError):
         return NeedsUpload(url, "O yt-dlp não conseguiu ler este vídeo.", upload_instructions(kind))
+    if not isinstance(info, dict):
+        return NeedsUpload(url, "O yt-dlp não conseguiu ler este vídeo.", upload_instructions(kind))
+    text = _video_text(info)
     method = "yt-dlp"
     try:
         transcript = transcribe(url) if transcribe else None
@@ -105,16 +121,18 @@ def gather_video(url, run=subprocess.run, transcribe=None):
 
 def whisper_transcribe(url, run=subprocess.run):
     """Best-effort transcript via yt-dlp audio download + openai-whisper. Returns None if
-    whisper or ffmpeg are unavailable or anything fails: the transcript is a bonus."""
+    whisper or ffmpeg are unavailable or anything fails: the transcript is a bonus.
+    Note: whisper.load_model("base") downloads about 140 MB the first time it's used."""
     try:
         import whisper  # noqa: WPS433 (optional heavy dependency, imported lazily)
     except ImportError:
         return None
     try:
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             proc = run(
-                ["yt-dlp", "-x", "--audio-format", "mp3", "-o", f"{tmp}/audio.%(ext)s", url],
-                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                ["yt-dlp", "-x", "--audio-format", "mp3", "--no-playlist", "--playlist-items", "1",
+                 "-o", f"{tmp}/audio.%(ext)s", "--", url],
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=AUDIO_TIMEOUT,
             )
             if proc.returncode != 0:
                 return None

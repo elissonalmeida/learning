@@ -1,4 +1,5 @@
 import json
+import subprocess
 from types import SimpleNamespace
 
 from sherlock import gather, models
@@ -29,11 +30,54 @@ def test_gather_video_appends_transcript_when_available():
 
 def test_gather_video_returns_needs_upload_when_ytdlp_fails():
     def run(cmd, **kwargs):
-        return SimpleNamespace(returncode=1, stdout="", stderr="ERROR: bloqueado")
+        return SimpleNamespace(returncode=1, stdout="", stderr="ERROR: bloqueado https://secret.example/token=abc")
 
     result = gather.gather_video("https://www.tiktok.com/@a", run=run)
     assert isinstance(result, models.NeedsUpload)
-    assert "bloqueado" in result.reason
+    assert "bloqueado" not in result.reason
+    assert result.reason == gather.VIDEO_FAIL_REASON
+
+
+def test_gather_video_argv_has_separator_before_url_and_playlist_guards():
+    seen = {}
+
+    def run(cmd, **kwargs):
+        seen["cmd"] = cmd
+        seen.update(kwargs)
+        return SimpleNamespace(returncode=0, stdout=json.dumps({"title": "T"}), stderr="")
+
+    url = "https://youtu.be/x"
+    gather.gather_video(url, run=run)
+    assert seen["cmd"][-2:] == ["--", url]
+    assert "--no-playlist" in seen["cmd"]
+    assert "--playlist-items" in seen["cmd"]
+    assert seen["timeout"] == gather.METADATA_TIMEOUT
+
+
+def test_gather_video_rejects_source_without_http_scheme():
+    def run(cmd, **kwargs):
+        raise AssertionError("yt-dlp must not be invoked for an unsafe source")
+
+    result = gather.gather_video("--exec=calc.exe", run=run)
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.VIDEO_BAD_SOURCE_REASON
+
+
+def test_gather_video_returns_needs_upload_on_timeout():
+    def run(cmd, **kwargs):
+        raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout"))
+
+    result = gather.gather_video("https://youtu.be/x", run=run)
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.VIDEO_TIMEOUT_REASON
+
+
+def test_gather_video_returns_needs_upload_when_json_is_not_an_object():
+    for out in ("[]", "null", "5"):
+        def run(cmd, out=out, **kwargs):
+            return SimpleNamespace(returncode=0, stdout=out, stderr="")
+
+        assert isinstance(gather.gather_video("https://youtu.be/x", run=run), models.NeedsUpload)
 
 
 def test_gather_video_returns_needs_upload_when_ytdlp_missing():
@@ -109,6 +153,64 @@ def test_whisper_transcribe_returns_none_when_download_fails(monkeypatch):
         return SimpleNamespace(returncode=1, stdout="", stderr="x")
 
     assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
+
+
+def test_whisper_transcribe_argv_has_separator_before_url_and_playlist_guards(monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "whisper", SimpleNamespace(load_model=lambda name: None))
+    seen = {}
+
+    def run(cmd, **kwargs):
+        seen["cmd"] = cmd
+        seen.update(kwargs)
+        return SimpleNamespace(returncode=1, stdout="", stderr="")
+
+    url = "https://youtu.be/x"
+    gather.whisper_transcribe(url, run=run)
+    assert seen["cmd"][-2:] == ["--", url]
+    assert "--no-playlist" in seen["cmd"]
+    assert seen["timeout"] == gather.AUDIO_TIMEOUT
+
+
+def test_whisper_transcribe_returns_none_on_timeout(monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "whisper", SimpleNamespace(load_model=lambda name: None))
+
+    def run(cmd, **kwargs):
+        raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout"))
+
+    assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
+
+
+def test_whisper_transcribe_survives_tempdir_cleanup_errors(monkeypatch):
+    import sys
+
+    class FakeModel:
+        def transcribe(self, path):
+            return {"text": "transcrição boa"}
+
+    monkeypatch.setitem(sys.modules, "whisper", SimpleNamespace(load_model=lambda name: FakeModel()))
+
+    class FakeTempDir:
+        def __init__(self, ignore_cleanup_errors=False):
+            self.ignore_cleanup_errors = ignore_cleanup_errors
+
+        def __enter__(self):
+            return "tmp"
+
+        def __exit__(self, *a):
+            if not self.ignore_cleanup_errors:
+                raise PermissionError("ficheiro em uso pelo ffmpeg")
+            return False
+
+    monkeypatch.setattr(gather.tempfile, "TemporaryDirectory", FakeTempDir)
+
+    def run(cmd, **kwargs):
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    assert gather.whisper_transcribe("https://youtu.be/x", run=run) == "transcrição boa"
 
 
 def test_gather_video_treats_raising_transcribe_as_no_transcript():
