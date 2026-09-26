@@ -17,6 +17,11 @@ HEADER_CSS = """
     letter-spacing: 1px;
     margin: 0;
 }
+/* Slides open big through our own "Ver maior" (#47): hide the built-in
+   fullscreen button on images only, so there is one obvious path. */
+[data-testid="stElementContainer"]:has([data-testid="stImage"]) [data-testid="stElementToolbar"] {
+    display: none;
+}
 </style>
 """
 

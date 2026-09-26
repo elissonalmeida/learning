@@ -1,3 +1,6 @@
+import base64
+from pathlib import Path
+
 import streamlit as st
 
 import ai
@@ -70,6 +73,50 @@ def run_with_progress(fn, *args, **kwargs):
         else:
             status.update(label="Concluído", state="complete")
             return result
+
+
+ENLARGED_KEY = "enlarged_slide"
+
+
+def data_uri(path):
+    return "data:image/png;base64," + base64.b64encode(Path(path).read_bytes()).decode()
+
+
+def open_enlarged(idea_id, slide_index):
+    st.session_state[ENLARGED_KEY] = (idea_id, slide_index)
+
+
+def close_enlarged():
+    st.session_state.pop(ENLARGED_KEY, None)
+
+
+@st.dialog("Slide em tamanho maior", width="large", on_dismiss=close_enlarged)
+def enlarged_slide_dialog(paths, total):
+    """Shows one slide big, with a clear way back (#47). paths maps
+    slide_index -> image file for the slides that have an image."""
+    idea_id, current = st.session_state[ENLARGED_KEY]
+    order = sorted(paths)
+    pos = order.index(current)
+    head, close = st.columns([4, 1], vertical_alignment="center")
+    head.caption(f"Slide {current + 1} de {total}")
+    if close.button("Fechar", key="enlarged_close", type="primary", icon=":material/close:", width="stretch"):
+        close_enlarged()
+        st.rerun()
+    st.html(
+        f'<div class="enlarged-slide"><img src="{data_uri(paths[current])}" alt="Slide {current + 1}" '
+        'style="display:block;margin:0 auto;height:min(68vh,1350px);max-width:100%;'
+        'aspect-ratio:4/5;object-fit:contain;border-radius:6px"></div>'
+    )
+    col_prev, col_next = st.columns(2)
+    col_prev.button(
+        "◀ Anterior", key="enlarged_prev", width="stretch", disabled=pos == 0,
+        on_click=open_enlarged, args=(idea_id, order[pos - 1]),
+    )
+    col_next.button(
+        "Seguinte ▶", key="enlarged_next", width="stretch", disabled=pos == len(order) - 1,
+        on_click=open_enlarged, args=(idea_id, order[min(pos + 1, len(order) - 1)]),
+    )
+
 
 def render_reviewed_draft(conn, idea):
     """Shows the latest draft of a "reviewed" idea with Aprovar/Rejeitar,
@@ -203,6 +250,10 @@ with tab_images:
 
             if existing:
                 st.image(existing["file_path"], width=300)
+                st.button(
+                    "Ver maior", key=f"enlarge_{i}", icon=":material/zoom_in:",
+                    on_click=open_enlarged, args=(idea["id"], i),
+                )
                 if existing["text_overflow"]:
                     st.info(
                         "Este texto é um pouco longo para o slide — se quiseres, encurta-o "
@@ -286,6 +337,10 @@ with tab_images:
             st.write(f"**Legenda:** {latest_draft['caption']}")
         else:
             st.info("Aprova todas as imagens para veres a pré-visualização do carrossel.")
+
+        enlarged = st.session_state.get(ENLARGED_KEY)
+        if enlarged and enlarged[0] == idea["id"]:
+            enlarged_slide_dialog({k: img["file_path"] for k, img in existing_images.items()}, len(slides))
 
 with tab_library:
     st.subheader("Biblioteca")
