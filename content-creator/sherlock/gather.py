@@ -205,6 +205,13 @@ def gather_video(url, run=subprocess.run, transcribe=None):
 
 TRANSCRIBE_TIMEOUT = 600
 
+# Only one transcription worker at a time: if a previous call's worker thread is
+# still running (e.g. it outlived TRANSCRIBE_TIMEOUT and is still stuck), a new
+# call bails out immediately instead of piling up another CPU-heavy transcription
+# on top of it.
+_transcribe_state = {"worker": None}
+_transcribe_lock = threading.Lock()
+
 
 def whisper_transcribe(url, run=subprocess.run):
     """Best-effort transcript via yt-dlp audio download + openai-whisper. Returns None if
@@ -212,6 +219,10 @@ def whisper_transcribe(url, run=subprocess.run):
     Note: the first call loads the "base" Whisper model, which downloads about 140 MB
     from the network; TRANSCRIBE_TIMEOUT bounds that download plus the transcription
     itself, since both run in the worker thread below."""
+    with _transcribe_lock:
+        previous = _transcribe_state["worker"]
+        if previous is not None and previous.is_alive():
+            return None
     try:
         import whisper  # noqa: WPS433 (optional heavy dependency, imported lazily)
     except ImportError:
@@ -229,10 +240,19 @@ def whisper_transcribe(url, run=subprocess.run):
             outcome = {}
 
             def _run_model():
-                model = whisper.load_model("base")
-                outcome["text"] = model.transcribe(f"{tmp}/audio.mp3").get("text", "").strip() or None
+                # Runs on a worker thread: any exception here must not reach
+                # threading.excepthook (which would print a traceback) -- a failed
+                # transcription is just "no transcript", handled the same as every
+                # other failure mode in this function.
+                try:
+                    model = whisper.load_model("base")
+                    outcome["text"] = model.transcribe(f"{tmp}/audio.mp3").get("text", "").strip() or None
+                except Exception:
+                    outcome["text"] = None
 
             worker = threading.Thread(target=_run_model, daemon=True)
+            with _transcribe_lock:
+                _transcribe_state["worker"] = worker
             worker.start()
             worker.join(TRANSCRIBE_TIMEOUT)
             if worker.is_alive():  # still running: give up, don't wait for it any longer

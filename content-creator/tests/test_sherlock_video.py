@@ -2,7 +2,20 @@ import json
 import subprocess
 from types import SimpleNamespace
 
+import pytest
+
 from sherlock import gather, models
+
+
+@pytest.fixture(autouse=True)
+def _reset_transcribe_worker_state():
+    """whisper_transcribe tracks its last worker thread in module state (finding A)
+    so overlapping transcriptions bail out. Reset it around every test so a slow
+    fake model left running by one test can't make the next test see a "worker
+    still alive" false positive."""
+    gather._transcribe_state["worker"] = None
+    yield
+    gather._transcribe_state["worker"] = None
 
 
 def fake_run_ok(info):
@@ -236,6 +249,60 @@ def test_whisper_transcribe_returns_none_when_transcription_times_out(monkeypatc
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
+
+
+def test_whisper_transcribe_worker_exception_does_not_reach_excepthook(monkeypatch):
+    import sys
+    import threading
+
+    excepthook_calls = []
+    monkeypatch.setattr(threading, "excepthook", lambda args: excepthook_calls.append(args))
+
+    class BoomModel:
+        def transcribe(self, path):
+            raise RuntimeError("o modelo rebentou")
+
+    monkeypatch.setitem(sys.modules, "whisper", SimpleNamespace(load_model=lambda name: BoomModel()))
+
+    def run(cmd, **kwargs):
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
+    assert excepthook_calls == []
+
+
+def test_whisper_transcribe_returns_none_immediately_if_a_previous_worker_is_still_alive(monkeypatch):
+    import sys
+    import threading
+    import time
+
+    monkeypatch.setattr(gather, "TRANSCRIBE_TIMEOUT", 0.05)
+    started = threading.Event()
+
+    class SlowModel:
+        def transcribe(self, path):
+            started.set()
+            time.sleep(0.3)  # still running well after TRANSCRIBE_TIMEOUT elapses
+            return {"text": "nunca chega"}
+
+    monkeypatch.setitem(sys.modules, "whisper", SimpleNamespace(load_model=lambda name: SlowModel()))
+
+    calls = []
+
+    def run(cmd, **kwargs):
+        calls.append(cmd)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    # First call times out, but its worker thread is still running in the background.
+    assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
+    assert started.wait(1), "the worker never started"
+
+    calls_before = len(calls)
+    # Second call must see the still-alive worker and bail out without running yt-dlp again.
+    assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
+    assert len(calls) == calls_before
+
+    gather._transcribe_state["worker"].join(2)  # let the slow worker finish before the test ends
 
 
 def test_whisper_transcribe_survives_tempdir_cleanup_errors(monkeypatch):
