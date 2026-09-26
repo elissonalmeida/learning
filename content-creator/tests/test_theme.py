@@ -1,3 +1,4 @@
+import copy
 import tomllib
 from pathlib import Path
 from unittest.mock import patch
@@ -41,16 +42,33 @@ def test_config_toml_hides_default_toolbar():
 
 def test_config_toml_is_valid_for_the_installed_streamlit():
     """Loads config.toml through Streamlit's own config machinery (not just
-    tomllib), so a key Streamlit rejects or ignores would be caught."""
+    tomllib), so a key Streamlit rejects or ignores would be caught.
+
+    This parses CONFIG_PATH's own content directly (resolved from this test
+    file, not the CWD) into a throwaway options dict, instead of calling
+    get_config_options() — which discovers files relative to the CWD and
+    also merges in a user's ~/.streamlit/config.toml, either of which would
+    make this test depend on where/by-whom it's run. Streamlit's global
+    config state is restored afterwards so other tests aren't affected.
+    """
     with open(CONFIG_PATH, "rb") as f:
         raw_theme = tomllib.load(f)["theme"]
+    with open(CONFIG_PATH, encoding="utf-8") as f:
+        raw_toml = f.read()
 
-    valid_options = st_config.get_config_options(force_reparse=True)
-    for key in raw_theme:
-        assert f"theme.{key}" in valid_options, f"theme.{key} is not a valid Streamlit config option"
+    original_options = st_config._config_options
+    try:
+        st_config._config_options = copy.deepcopy(st_config._config_options_template)
+        st_config._update_config_with_toml(raw_toml, str(CONFIG_PATH))
 
-    assert st_config.get_option("theme.yellowColor") == "#C4922A"
-    assert st_config.get_where_defined("theme.yellowColor") == str(CONFIG_PATH)
+        valid_options = st_config._config_options
+        for key in raw_theme:
+            assert f"theme.{key}" in valid_options, f"theme.{key} is not a valid Streamlit config option"
+
+        assert st_config.get_option("theme.yellowColor") == "#C4922A"
+        assert st_config.get_where_defined("theme.yellowColor") == str(CONFIG_PATH)
+    finally:
+        st_config._config_options = original_options
 
 
 def test_inject_theme_renders_header_css_with_unsafe_html():
