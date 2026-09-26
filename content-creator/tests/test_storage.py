@@ -27,9 +27,9 @@ def test_make_carousel_folder_increments_past_multiple_collisions(tmp_path):
     assert name == "2026-09-13_ritual-matinal_3"
 
 
-def test_images_root_is_sibling_of_db_file():
-    root = storage.images_root(r"C:\Users\Elisson\Dropbox\learning\aura\mariana_content.db")
-    assert str(root) == r"C:\Users\Elisson\Dropbox\learning\aura\images"
+def test_images_root_is_sibling_of_db_file(tmp_path):
+    root = storage.images_root(tmp_path / "mariana_content.db")
+    assert root == tmp_path / "images"
 
 
 def test_make_carousel_folder_caps_long_topics(tmp_path):

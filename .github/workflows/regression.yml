@@ -44,20 +44,25 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: pytest-log
-      - uses: anthropics/claude-code-action@v1
+      - uses: actions/setup-node@v4
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: >-
+          node-version: "22"
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: Claude reviews the failure and files an issue
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          claude -p "The regression suite failed for commit $COMMIT (run: $RUN_URL).
+          The pytest output is in pytest.log; the code is in content-creator/.
+          1. Read the log and the failing tests and code. Find the most likely root cause.
+          2. Run 'gh issue list --label regression --state open' first. If an open issue
+             already covers the same failure, add a short comment with this run's link
+             instead of creating a new one.
+          3. Otherwise create ONE issue with 'gh issue create --label bug --label regression':
+             title naming the failing test(s); body with what failed, likely cause, the
+             suspect file/commit, and the run link. Keep it short and plain.
+          Do not modify any code." \
             --allowedTools "Read,Grep,Glob,Bash(gh issue list:*),Bash(gh issue create:*),Bash(gh issue comment:*)"
-          prompt: |
-            The regression suite failed for commit ${{ github.sha }}
-            (run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
-            The pytest output is in pytest.log; the code is in content-creator/.
-            1. Read the log and the failing tests and code. Find the most likely root cause.
-            2. Run `gh issue list --label regression --state open` first. If an open issue
-               already covers the same failure, add a short comment with this run's link instead
-               of creating a new one.
-            3. Otherwise create ONE issue with `gh issue create --label bug --label regression`:
-               title naming the failing test(s); body with what failed, likely cause,
-               the suspect file/commit, and the run link. Keep it short and plain.
-            Do not modify any code.
