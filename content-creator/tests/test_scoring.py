@@ -41,7 +41,11 @@ def test_score_goals_ranks_by_score_and_ignores_model_rank():
 
 
 def test_score_goals_prompt_carries_tone_rule_and_evidence():
-    client = fake_client([{"goal": "build_authority", "score": 1, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}])
+    payload = [
+        {"goal": "build_authority", "score": 1, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"},
+        {"goal": "get_conversations", "score": 2, "metric": "m2", "target": "t2", "reasons": ["r"], "evidence": "reasoned"},
+    ]
+    client = fake_client(payload)
     scoring.score_goals(client, PROFILE, EVIDENCE)
     prompt = client.messages.create.call_args.kwargs["messages"][0]["content"]
     assert "gentil" in prompt and "resumo de um perfil" in prompt
@@ -63,12 +67,24 @@ def test_validate_rejects_malformed_items(bad):
 
 
 def test_data_evidence_is_downgraded_when_no_windsor_data():
-    payload = [{"goal": "build_authority", "score": 70, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "data"}]
+    payload = [
+        {"goal": "build_authority", "score": 70, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "data"},
+        {"goal": "get_conversations", "score": 40, "metric": "m2", "target": "t2", "reasons": ["r"], "evidence": "reasoned"},
+    ]
     items, *_ = scoring.score_goals(fake_client(payload), PROFILE, EVIDENCE)
-    assert items[0]["evidence"] == "reasoned"
+    assert next(i for i in items if i["goal"] == "build_authority")["evidence"] == "reasoned"
 
 
 def test_pattern_evidence_is_downgraded_when_no_findings():
-    payload = [{"goal": "build_authority", "score": 70, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "pattern"}]
+    payload = [
+        {"goal": "build_authority", "score": 70, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "pattern"},
+        {"goal": "get_conversations", "score": 40, "metric": "m2", "target": "t2", "reasons": ["r"], "evidence": "reasoned"},
+    ]
     items, *_ = scoring.score_goals(fake_client(payload), PROFILE, {"windsor": None, "findings": []})
-    assert items[0]["evidence"] == "reasoned"
+    assert next(i for i in items if i["goal"] == "build_authority")["evidence"] == "reasoned"
+
+
+def test_validate_rejects_a_missing_chosen_goal():
+    items = [{"goal": "build_authority", "score": 5, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}]
+    with pytest.raises(ai.InvalidAIResponseError):
+        scoring.validate_scored_goals(items, ["build_authority", "get_conversations"])

@@ -37,6 +37,8 @@ def validate_scored_goals(items, allowed_goals):
             raise ai.InvalidAIResponseError("Cada objectivo precisa de pelo menos uma razão.")
         if not isinstance(item.get("metric"), str) or not isinstance(item.get("target"), str):
             raise ai.InvalidAIResponseError("Cada objectivo precisa de métrica e meta.")
+    if seen != set(allowed_goals):
+        raise ai.InvalidAIResponseError("Nem todos os objectivos escolhidos vieram pontuados.")
     return items
 
 
