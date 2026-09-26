@@ -12,9 +12,12 @@ project) for history.
 - **Parallel ticket workflow**: built; `status:*` labels exist on
   `elissonalmeida/learning`.
 - **All planned work is broken into GitHub tickets** (labels `status:*`).
-  Implemented so far: #13 (look-and-feel, global theme, merged into
-  `look-and-feel`) and #16, #17, #18, #19, #20, #23 (strategy-coach: tone guard, coach store, Sherlock models + website, video and Instagram gather, goal scoring; merged into
-  `strategy-coach`), all `status:done`. Everything else is still specs,
+  Done (`status:done`): #13 (look-and-feel theme); #16-#20, #23 (strategy-coach:
+  tone guard, coach store, Sherlock gather, goal scoring); and the 2026-09-26 fix pass:
+  #46 (readable slide card/hero renderer), #47 ("Ver maior" dialog with Fechar), #48
+  ("Gerar todas as imagens" / "Recriar todas" / per-slide "Recriar", spend-cap aware,
+  paid-tested), #49 (Instagram-style carousel preview), #50-#52 (draft lost on reload,
+  Gemini returning no image, screens not refreshing). Everything else is still specs,
   plans and tickets:
 
   | Plan (`content-creator/docs/superpowers/plans/`) | Old feature branch (merged, retired) | Tickets |
@@ -31,12 +34,15 @@ project) for history.
 
 ## What's next
 
-- Unblocked right now: #14, #15 (look-and-feel), #21 (strategy-coach),
-  #26, #27 (content-calendar), #33 (calendar-post-link), #37, #38, #40
-  (windsor-results), plus user-reported bugs/feature #46 (slide text card
-  unreadable, blocks publishing), #47 (fullscreen image has no way back), #48
-  (generate/recreate all images), #49 (Instagram-style preview). Run
-  `pick_ticket.py` for the live list.
+- **Fix pass finished (2026-09-26):** every user-reported bug/feature (#46-#52) is merged,
+  reviewed and pushed; the app was checked on a copy of the real DB. Next is regular ticket
+  work. Pending right now: #26, #27 (content-calendar), #33 (calendar-post-link), #37, #38,
+  #40 (windsor-results). #14, #15, #21 carry `status:blocked` although their listed deps
+  look done: check with `pick_ticket.py` / the issue's `Depends on:` before unblocking.
+  #25 is correctly blocked (it was wrongly marked done once and reverted).
+- Parked from the #48 review: after "Recriar todas" an idea keeps status `images_ready`
+  while its new images wait for approval (same as the old per-slide regenerate). Harmless
+  today; revisit before any publish step relies on `images_ready`.
 - **Single-branch workflow (since 2026-09-25):** ALL work lives on `main`. The five
   feature branches (`look-and-feel`, `strategy-coach`, `content-calendar`,
   `calendar-post-link`, `windsor-results`) were merged into `main` and are retired; do not
