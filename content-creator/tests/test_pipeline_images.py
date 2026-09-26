@@ -73,6 +73,21 @@ def test_generate_slide_image_raises_when_daily_cap_already_reached(conn, idea, 
         )
 
 
+def test_generate_slide_image_daily_budget_error_message_is_gentle_pt_pt(conn, idea, tmp_path):
+    import tone_guard
+
+    db.log_api_call(conn, "generate_draft", tokens_in=1, tokens_out=1, estimated_cost_usd=2.0, idea_id=idea["id"])
+    with pytest.raises(pipeline.DailyBudgetExceededError) as excinfo:
+        pipeline.generate_slide_image(
+            None, conn, idea, 0, "hero", "texto", "prompt", tmp_path, 2.0,
+            image_gen_module=make_fake_image_gen(), render_module=make_fake_render(),
+        )
+    message = str(excinfo.value)
+    assert tone_guard.find_harsh_words(message) == []
+    assert "$2.00" in message
+    assert "This call" not in message
+
+
 def test_generate_slide_image_reports_progress_via_on_step(conn, idea, tmp_path):
     events = []
     pipeline.generate_slide_image(

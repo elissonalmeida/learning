@@ -20,8 +20,8 @@ def _invoke(conn, idea_id, daily_cap_usd, function_name, ai_call, on_step=None):
 
     if db.would_exceed_daily_cap(conn, ESTIMATED_MAX_CALL_COST_USD, daily_cap_usd):
         error = DailyBudgetExceededError(
-            f"This call could push today's spend over the ${daily_cap_usd:.2f} daily cap. "
-            "Try again tomorrow or raise MAX_DAILY_SPEND_USD."
+            f"Por hoje já chegámos ao limite de gastos que definiste (${daily_cap_usd:.2f}). "
+            "Amanhã continuamos — ou, se quiseres, podes aumentar MAX_DAILY_SPEND_USD."
         )
         if on_step:
             on_step(function_name, "error", str(error))
@@ -112,8 +112,8 @@ def generate_slide_image(
         on_step("generate_image", "running")
     if db.would_exceed_daily_cap(conn, ESTIMATED_MAX_CALL_COST_USD, daily_cap_usd):
         error = DailyBudgetExceededError(
-            f"This call could push today's spend over the ${daily_cap_usd:.2f} daily cap. "
-            "Try again tomorrow or raise MAX_DAILY_SPEND_USD."
+            f"Por hoje já chegámos ao limite de gastos que definiste (${daily_cap_usd:.2f}). "
+            "Amanhã continuamos — ou, se quiseres, podes aumentar MAX_DAILY_SPEND_USD."
         )
         if on_step:
             on_step("generate_image", "error", str(error))
