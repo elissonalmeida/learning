@@ -48,7 +48,10 @@ def test_neutral_uses_of_alerta_and_grave_are_not_flagged():
 
 def test_all_canned_user_facing_strings_are_gentle():
     strings = _all_canned_strings()
-    assert len(strings) >= 10  # sanity check that the collection actually found the constants
+    # Sanity check that the collection actually found the scoring/coach_store ERR_*
+    # constants too, not just gather's *_REASON ones (finding 4): without them this
+    # count drops to 29.
+    assert len(strings) >= 40
     for text in strings:
         assert tone_guard.find_harsh_words(text) == [], f"harsh words in: {text!r}"
 
