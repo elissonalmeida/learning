@@ -129,9 +129,14 @@ def slide_label_list(indices):
 def slide_prompt(idea_id, slide_index, slide_text, role, existing):
     """The prompt a batch uses for one slide (#48): the user's edit in the
     prompt box if there is one, else the prompt that made the current image
-    (so earlier edits are kept), else a fresh one."""
+    (so earlier edits are kept), else a fresh one. The box's own widget value
+    comes first: an edit made just before the click is not mirrored into
+    prompt_... yet, because the batch runs before the slide loop."""
     fresh = image_gen.build_image_prompt(slide_text, cfg.brand_pack, role)
-    edited = st.session_state.get(f"prompt_{idea_id}_{slide_index}")
+    edited = (
+        st.session_state.get(f"prompt_area_{idea_id}_{slide_index}")
+        or st.session_state.get(f"prompt_{idea_id}_{slide_index}")
+    )
     if edited and edited != fresh:
         return edited
     if existing and existing["prompt"]:
@@ -142,8 +147,8 @@ def slide_prompt(idea_id, slide_index, slide_text, role, existing):
 def batch_cost_note(count, spend_today):
     """Upper-bound cost of a batch, and a gentle heads-up when today's
     remaining budget may not cover all of it."""
-    noun = "imagem" if count == 1 else "imagens"
-    note = f"{count} {noun} — até cerca de ${count * pipeline.ESTIMATED_MAX_CALL_COST_USD:.2f}."
+    cost = f"até cerca de ${count * pipeline.ESTIMATED_MAX_CALL_COST_USD:.2f}"
+    note = f"É 1 imagem, {cost}." if count == 1 else f"São {count} imagens, {cost}."
     room = max(int((cfg.max_daily_spend_usd - spend_today) / pipeline.ESTIMATED_MAX_CALL_COST_USD + 1e-9), 0)
     if room == 0:
         note += (
@@ -152,10 +157,26 @@ def batch_cost_note(count, spend_today):
         )
     elif room < count:
         note += (
-            f" O orçamento que resta hoje deve chegar para cerca de {room} — podes começar na mesma; "
-            "se chegarmos ao limite, paramos com calma e o resto fica para amanhã."
+            " Com o que resta do orçamento de hoje, "
+            + ("deve dar para 1 imagem" if room == 1 else f"devem dar para umas {room} imagens")
+            + " — podes começar na mesma; se chegarmos ao limite, paramos com calma "
+            "e as restantes ficam para amanhã."
         )
     return note
+
+
+def forget_slide_in_batch_summary(idea_id, slide_index):
+    """A slide made one by one is no longer pending from the last batch; the
+    summary goes away once nothing is left pending in it."""
+    key = f"batch_result_{idea_id}"
+    outcome = st.session_state.get(key)
+    if not outcome:
+        return
+    for pending in (outcome["failed"], outcome["not_attempted"]):
+        if slide_index in pending:
+            pending.remove(slide_index)
+    if not outcome["failed"] and not outcome["not_attempted"]:
+        st.session_state.pop(key)
 
 
 def run_image_batch(idea, slide_indices, slides, existing_images):
@@ -317,13 +338,15 @@ with tab_images:
         if missing:
             if col_all.button("Gerar todas as imagens", key="generate_all", type="primary"):
                 batch = missing
-            col_all.caption("Só os slides ainda sem imagem: " + batch_cost_note(len(missing), spend_today))
+            col_all.caption("Gera só os slides ainda sem imagem. " + batch_cost_note(len(missing), spend_today))
         if existing_images and col_redo.button("Recriar todas", key="recreate_all"):
             st.session_state[confirm_key] = True
         if st.session_state.get(confirm_key):
+            some_approved = any(img["status"] == "approved" for img in existing_images.values())
             st.warning(
-                f"Vamos criar imagens novas para os {len(slides)} slides, também para os que já aprovaste — "
-                "as novas ficam à espera da tua aprovação. " + batch_cost_note(len(slides), spend_today)
+                f"Vamos criar imagens novas para os {len(slides)} slides"
+                + (", também para os que já aprovaste" if some_approved else "")
+                + " — as novas ficam à espera da tua aprovação. " + batch_cost_note(len(slides), spend_today)
             )
             col_yes, col_cancel = st.columns(2)
             if col_yes.button("Sim, recriar todas", key="recreate_all_yes", type="primary"):
@@ -333,7 +356,8 @@ with tab_images:
                 st.session_state.pop(confirm_key)
                 st.rerun()
 
-        outcome = st.session_state.get(f"batch_result_{idea['id']}")
+        outcome_key = f"batch_result_{idea['id']}"
+        outcome = st.session_state.get(outcome_key)
         if outcome:
             done = len(outcome["done"])
             if done:
@@ -352,7 +376,8 @@ with tab_images:
                     "Podes tentar de novo só estas."
                 )
                 if st.button("Tentar de novo só estas", key="retry_failed"):
-                    batch = outcome["failed"]
+                    # Popped so an interrupted/double-clicked retry can't reuse a stale list.
+                    batch = st.session_state.pop(outcome_key)["failed"]
                 with st.expander("Detalhes (para diagnóstico)", expanded=False):
                     st.code("\n".join(f"Slide {i + 1}: {e}" for i, e in outcome["errors"].items()))
         if batch:
@@ -424,6 +449,7 @@ with tab_images:
                         )
                     else:
                         st.session_state[f"show_prompt_{idea['id']}_{i}"] = False
+                        forget_slide_in_batch_summary(idea["id"], i)
                         st.rerun()
 
         st.divider()

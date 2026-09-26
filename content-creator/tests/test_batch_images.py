@@ -43,19 +43,27 @@ def _setup(tmp_path, monkeypatch, with_images=(), approved=(), spent=0.0):
     return db_path, idea_id
 
 
-def _fake_gemini(monkeypatch, fail_prompts=()):
+def _fake_gemini(monkeypatch, fail_prompts=(), layouts=None, during_call=None):
     """Records each prompt sent; prompts containing any of fail_prompts get
-    no image back."""
+    no image back. layouts, if given, records (role, is_last) per slide laid
+    out; during_call, if given, runs inside each Gemini call."""
     sent = []
+
+    def build_slide_html(text, image, brand, role, is_last=False):
+        if layouts is not None:
+            layouts.append((role, is_last))
+        return "<html></html>"
 
     def generate_image(client, prompt):
         sent.append(prompt)
+        if during_call:
+            during_call()
         if any(p in prompt for p in fail_prompts):
             raise image_gen.NoImageReturned(tokens_in=1, tokens_out=1, cost=0.01)
         return _TINY_PNG_BYTES, 1, 1, 0.05
 
     monkeypatch.setattr(image_gen, "generate_image", generate_image)
-    monkeypatch.setattr(render, "build_slide_html", lambda text, image, brand, role, is_last=False: "<html></html>")
+    monkeypatch.setattr(render, "build_slide_html", build_slide_html)
     monkeypatch.setattr(render, "render_png", lambda html, fit=None: _TINY_PNG_BYTES)
     return sent
 
@@ -95,7 +103,7 @@ def test_gerar_todas_shows_only_when_a_slide_has_no_image_with_its_upper_bound_c
     at = _app()
 
     assert "Gerar todas as imagens" in _labels(at)
-    assert any("2 imagens — até cerca de $0.40" in c.value for c in at.caption)
+    assert any("Gera só os slides ainda sem imagem. São 2 imagens, até cerca de $0.40." in c.value for c in at.caption)
     _assert_gentle(at)
 
 
@@ -183,7 +191,7 @@ def test_recriar_todas_asks_first_and_cancelar_changes_nothing(tmp_path, monkeyp
     assert not at.exception
     assert sent == []
     assert any("também para os que já aprovaste" in w.value for w in at.warning)
-    assert any("3 imagens — até cerca de $0.60" in w.value for w in at.warning)
+    assert any("São 3 imagens, até cerca de $0.60." in w.value for w in at.warning)
     assert "Sim, recriar todas" in _labels(at)
     _assert_gentle(at)
 
@@ -240,7 +248,7 @@ def test_budget_heads_up_before_and_gentle_stop_during_the_batch(tmp_path, monke
     sent = _fake_gemini(monkeypatch)
     at = _app()
 
-    assert any("deve chegar para cerca de 1" in c.value for c in at.caption)
+    assert any("Com o que resta do orçamento de hoje, deve dar para 1 imagem" in c.value for c in at.caption)
     _assert_gentle(at)
 
     at.button(key="generate_all").click().run()
@@ -251,3 +259,118 @@ def test_budget_heads_up_before_and_gentle_stop_during_the_batch(tmp_path, monke
     assert any("limite de gastos" in i.value and "Ficaram para depois: Slide 2, Slide 3" in i.value for i in at.info)
     assert not [e for e in at.error]
     _assert_gentle(at)
+
+
+# ---- Fix round 1 (review of #48) ------------------------------------------
+
+def test_an_edit_and_the_gerar_todas_click_in_the_same_run_use_the_edit(tmp_path, monkeypatch):
+    db_path, idea_id = _setup(tmp_path, monkeypatch, with_images=[0])
+    sent = _fake_gemini(monkeypatch)
+    at = _app()
+
+    at.text_area(key=f"prompt_area_{idea_id}_2").set_value("EDITADO")
+    at.button(key="generate_all").click()
+    at.run()
+
+    assert not at.exception
+    assert "EDITADO" in sent
+    assert _latest(db_path, idea_id)[2]["prompt"] == "EDITADO"
+
+
+def test_recriar_opened_without_editing_keeps_the_saved_prompt_and_closes_the_box(tmp_path, monkeypatch):
+    _, idea_id = _setup(tmp_path, monkeypatch, with_images=[0, 1, 2])
+    sent = _fake_gemini(monkeypatch)
+    at = _app()
+    at.button(key="regen_1").click().run()
+    assert at.text_area(key=f"prompt_area_{idea_id}_1")
+
+    at.button(key="recreate_all").click().run()
+    at.button(key="recreate_all_yes").click().run()
+
+    assert not at.exception
+    assert sent[1] == "prompt guardado 1"
+    assert not [t for t in at.text_area if t.key == f"prompt_area_{idea_id}_1"]
+
+
+def test_batch_lays_out_the_cover_as_hero_and_only_the_final_slide_as_last(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch, with_images=[0, 1, 2])
+    layouts = []
+    _fake_gemini(monkeypatch, layouts=layouts)
+    at = _app()
+
+    at.button(key="recreate_all").click().run()
+    at.button(key="recreate_all_yes").click().run()
+
+    assert not at.exception
+    assert layouts == [("hero", False), ("card", False), ("card", True)]
+
+
+def test_confirmation_mentions_approved_slides_only_when_there_are_some(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch, with_images=[0, 1, 2])
+    at = _app()
+
+    at.button(key="recreate_all").click().run()
+
+    assert not at.exception
+    assert len(at.warning) == 1
+    assert "aprovaste" not in at.warning[0].value
+    assert at.warning[0].value.startswith(
+        "Vamos criar imagens novas para os 3 slides — as novas ficam à espera da tua aprovação."
+    )
+
+
+def test_singular_cost_and_budget_wording(tmp_path, monkeypatch):
+    # $2.00 cap, $1.76 spent: one image fits at the estimate; one slide is missing.
+    _setup(tmp_path, monkeypatch, with_images=[0, 1], spent=1.76)
+    at = _app()
+    assert any("É 1 imagem, até cerca de $0.20." in c.value for c in at.caption)
+
+
+def test_plural_budget_wording(tmp_path, monkeypatch):
+    # $2.00 cap, $1.55 spent: two images fit at the estimate; three are missing.
+    _setup(tmp_path, monkeypatch, spent=1.55)
+    at = _app()
+    assert any("devem dar para umas 2 imagens" in c.value for c in at.caption)
+    _assert_gentle(at)
+
+
+def test_a_slide_fixed_one_by_one_leaves_the_batch_summary(tmp_path, monkeypatch):
+    _, idea_id = _setup(tmp_path, monkeypatch, with_images=[0, 1, 2])
+    _fake_gemini(monkeypatch, fail_prompts=["guardado 1", "guardado 2"])
+    at = _app()
+    at.button(key="recreate_all").click().run()
+    at.button(key="recreate_all_yes").click().run()
+    assert any("Slide 2, Slide 3" in i.value for i in at.info)
+
+    _fake_gemini(monkeypatch)
+    at.button(key="regen_1").click().run()
+    at.button(key="generate_1").click().run()
+
+    assert not at.exception
+    assert any("Desta vez não vieram imagens para: Slide 3." in i.value for i in at.info)
+    assert not [i for i in at.info if "Slide 2" in i.value]
+
+    at.button(key="regen_2").click().run()
+    at.button(key="generate_2").click().run()
+
+    assert not at.exception
+    assert not [i for i in at.info if "Desta vez não vieram" in i.value]
+    assert "Tentar de novo só estas" not in _labels(at)
+    assert f"batch_result_{idea_id}" not in at.session_state
+
+
+def test_a_retry_drops_the_old_summary_before_it_starts(tmp_path, monkeypatch):
+    _, idea_id = _setup(tmp_path, monkeypatch, with_images=[0, 1, 2])
+    _fake_gemini(monkeypatch, fail_prompts=["guardado 1"])
+    at = _app()
+    at.button(key="recreate_all").click().run()
+    at.button(key="recreate_all_yes").click().run()
+
+    import streamlit as st
+
+    seen = []
+    _fake_gemini(monkeypatch, during_call=lambda: seen.append(f"batch_result_{idea_id}" in st.session_state))
+    at.button(key="retry_failed").click().run()
+
+    assert not at.exception
+    assert seen == [False]  # an interrupted run or a second click finds no stale failed list
