@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 SECTION_KINDS = ("goals", "offers", "funnel", "pillars", "authority", "rhythm")
 SECTION_STATES = ("draft", "accepted", "revisit")
+SECTION_EVIDENCE_LEVELS = ("data", "pattern", "reasoned")
 
 
 def _now():
@@ -101,6 +102,8 @@ def set_section(conn, strategy_id, kind, content, state="draft", evidence="reaso
         raise ValueError(f"Unknown section kind: {kind}")
     if state not in SECTION_STATES:
         raise ValueError(f"Unknown section state: {state}")
+    if evidence not in SECTION_EVIDENCE_LEVELS:
+        raise ValueError(f"Unknown section evidence: {evidence}")
     conn.execute(
         "INSERT INTO strategy_sections (strategy_id, kind, content_json, state, evidence, updated_at) "
         "VALUES (?, ?, ?, ?, ?, ?) "
@@ -128,10 +131,12 @@ def set_section_state(conn, strategy_id, kind, state):
         raise ValueError(f"Unknown section kind: {kind}")
     if state not in SECTION_STATES:
         raise ValueError(f"Unknown section state: {state}")
-    conn.execute(
+    cursor = conn.execute(
         "UPDATE strategy_sections SET state = ?, updated_at = ? WHERE strategy_id = ? AND kind = ?",
         (state, _now(), strategy_id, kind),
     )
+    if cursor.rowcount == 0:
+        raise LookupError(f"No section {kind!r} for strategy {strategy_id!r}")
     conn.commit()
 
 

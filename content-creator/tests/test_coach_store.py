@@ -37,6 +37,12 @@ def test_set_section_rejects_unknown_kind_and_state(conn):
         coach_store.set_section(conn, sid, "goals", {}, state="weird")
 
 
+def test_set_section_rejects_unknown_evidence(conn):
+    sid = coach_store.create_strategy(conn, "brand-a")
+    with pytest.raises(ValueError):
+        coach_store.set_section(conn, sid, "goals", {}, evidence="prova")
+
+
 def test_decisions_are_chronological_and_limitable(conn):
     sid = coach_store.create_strategy(conn, "brand-a")
     for i in range(5):
@@ -79,6 +85,12 @@ def test_set_section_state_rejects_unknown_kind_and_state(conn):
         coach_store.set_section_state(conn, sid, "goals", "weird")
     coach_store.set_section_state(conn, sid, "goals", "accepted")
     assert coach_store.get_sections(conn, sid)["goals"]["state"] == "accepted"
+
+
+def test_set_section_state_raises_when_section_does_not_exist(conn):
+    sid = coach_store.create_strategy(conn, "brand-a")
+    with pytest.raises(LookupError):
+        coach_store.set_section_state(conn, sid, "goals", "accepted")
 
 
 def test_log_decision_rejects_unknown_kind(conn):
