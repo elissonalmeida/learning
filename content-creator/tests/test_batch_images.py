@@ -330,7 +330,7 @@ def test_plural_budget_wording(tmp_path, monkeypatch):
     # $2.00 cap, $1.55 spent: two images fit at the estimate; three are missing.
     _setup(tmp_path, monkeypatch, spent=1.55)
     at = _app()
-    assert any("devem dar para umas 2 imagens" in c.value for c in at.caption)
+    assert any("deve dar para umas 2 imagens" in c.value for c in at.caption)
     _assert_gentle(at)
 
 

@@ -158,7 +158,7 @@ def batch_cost_note(count, spend_today):
     elif room < count:
         note += (
             " Com o que resta do orçamento de hoje, "
-            + ("deve dar para 1 imagem" if room == 1 else f"devem dar para umas {room} imagens")
+            + ("deve dar para 1 imagem" if room == 1 else f"deve dar para umas {room} imagens")
             + " — podes começar na mesma; se chegarmos ao limite, paramos com calma "
             "e as restantes ficam para amanhã."
         )
