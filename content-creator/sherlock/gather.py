@@ -4,6 +4,7 @@ import re
 import socket
 import subprocess
 import tempfile
+import urllib.error
 import urllib.parse
 import urllib.request
 from html.parser import HTMLParser
@@ -13,9 +14,11 @@ from sherlock.models import GatherResult, NeedsUpload, detect_platform, instagra
 MAX_CHARS = 20000
 MIN_CHARS = 200
 MAX_FETCH = 2_000_000  # max bytes read from a socket/response; also max chars of website html kept
+MAX_REDIRECTS = 5
 WEBSITE_FAIL_REASON = "Não consegui abrir esta página neste momento."
-WEBSITE_BLOCKED_REASON = "Esta hiperligação não pode ser aberta a partir daqui."
-WEBSITE_BAD_CONTENT_TYPE_REASON = "Esta hiperligação não leva a uma página de texto legível."
+WEBSITE_BLOCKED_REASON = "Este link não pode ser aberto a partir daqui."
+WEBSITE_BAD_CONTENT_TYPE_REASON = "Este link não leva a uma página de texto legível."
+WEBSITE_THIN_REASON = "A página quase não tem texto legível."
 
 
 class _UnsupportedContentType(Exception):
@@ -47,14 +50,16 @@ class _TextExtractor(HTMLParser):
             self.parts.append(data.strip())
 
 
-def _http_fetch(url, timeout=20):
-    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; ContentCreator/1.0)"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        content_type = (response.headers.get_content_type() or "").lower()
-        if content_type and not content_type.startswith("text/"):
-            raise _UnsupportedContentType(content_type)
-        charset = response.headers.get_content_charset() or "utf-8"
-        return response.read(MAX_FETCH).decode(charset, errors="replace")
+def _resolve_all(host):
+    """Default resolver: every address (IPv4 and IPv6) a real connection could land on."""
+    return [info[4][0] for info in socket.getaddrinfo(host, None)]
+
+
+def _is_blocked_ip(ip):
+    return (
+        ip.is_private or ip.is_loopback or ip.is_link_local
+        or ip.is_reserved or ip.is_multicast or ip.is_unspecified
+    )
 
 
 def _is_blocked_host(hostname, resolve):
@@ -64,16 +69,55 @@ def _is_blocked_host(hostname, resolve):
     if host == "localhost" or host.endswith(".localhost"):
         return True
     try:
-        ip = ipaddress.ip_address(host)
+        return _is_blocked_ip(ipaddress.ip_address(host))
     except ValueError:
+        pass  # not a literal address: resolve it below
+    try:
+        addresses = resolve(host)
+    except Exception:  # can't verify where this host points: fail closed
+        return True
+    if not addresses:
+        return True
+    for addr in addresses:
         try:
-            ip = ipaddress.ip_address(resolve(host))
-        except Exception:  # can't resolve here: let the real fetch succeed or fail on its own
-            return False
-    return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast
+            ip = ipaddress.ip_address(addr)
+        except ValueError:
+            return True  # an address we can't even parse: fail closed
+        if _is_blocked_ip(ip):
+            return True
+    return False
 
 
-def gather_website(url, fetch=_http_fetch, resolve=socket.gethostbyname):
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Re-checks every redirect hop against the same host guard as the initial
+    request, and caps the number of hops (the base class default is 10)."""
+
+    max_redirections = MAX_REDIRECTS
+
+    def __init__(self, resolve):
+        self._resolve = resolve
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parsed = urllib.parse.urlparse(newurl)
+        if parsed.scheme not in ("http", "https") or _is_blocked_host(parsed.hostname, self._resolve):
+            raise urllib.error.HTTPError(newurl, code, "Redirect to a blocked address refused", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _http_fetch(url, timeout=20, resolve=None):
+    resolve = resolve or _resolve_all
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; ContentCreator/1.0)"})
+    opener = urllib.request.build_opener(_SafeRedirectHandler(resolve))
+    with opener.open(request, timeout=timeout) as response:
+        content_type = (response.headers.get_content_type() or "").lower()
+        if content_type and not content_type.startswith("text/"):
+            raise _UnsupportedContentType(content_type)
+        charset = response.headers.get_content_charset() or "utf-8"
+        return response.read(MAX_FETCH).decode(charset, errors="replace")
+
+
+def gather_website(url, fetch=_http_fetch, resolve=None):
+    resolve = resolve or _resolve_all
     original = url.strip()
     normalized = original
     if "://" not in normalized:
@@ -91,7 +135,7 @@ def gather_website(url, fetch=_http_fetch, resolve=socket.gethostbyname):
     parser.feed(html)
     text = " ".join(parser.parts)[:MAX_CHARS]
     if len(text) < MIN_CHARS:
-        return NeedsUpload(original, "A página quase não tem texto legível.", upload_instructions("website"))
+        return NeedsUpload(original, WEBSITE_THIN_REASON, upload_instructions("website"))
     return GatherResult(original, "website", text)
 
 

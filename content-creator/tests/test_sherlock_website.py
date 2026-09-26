@@ -1,6 +1,17 @@
+import urllib.error
+import urllib.request
+
 import pytest
 
 from sherlock import gather, models
+
+
+@pytest.fixture(autouse=True)
+def _fake_dns(monkeypatch):
+    """None of these tests should touch real DNS (finding 5): fake the default
+    resolver to a fixed public address. Tests that need a specific resolution
+    outcome pass their own `resolve=` explicitly, which overrides this."""
+    monkeypatch.setattr(gather, "_resolve_all", lambda host: ["93.184.216.34"])
 
 
 def test_detect_platform():
@@ -96,6 +107,14 @@ def test_gather_website_caps_fetched_body(monkeypatch):
     assert "ZZZ" not in result.text
 
 
+class _FakeOpener:
+    def __init__(self, response):
+        self._response = response
+
+    def open(self, request, timeout=None):
+        return self._response
+
+
 def test_http_fetch_reads_a_bounded_number_of_bytes(monkeypatch):
     calls = {}
 
@@ -115,8 +134,8 @@ def test_http_fetch_reads_a_bounded_number_of_bytes(monkeypatch):
         def __exit__(self, *a):
             return False
 
-    monkeypatch.setattr(gather.urllib.request, "urlopen", lambda *a, **k: Resp())
-    assert gather._http_fetch("https://exemplo.pt") == "ola"
+    monkeypatch.setattr(gather.urllib.request, "build_opener", lambda handler: _FakeOpener(Resp()))
+    assert gather._http_fetch("https://exemplo.pt", resolve=lambda host: ["93.184.216.34"]) == "ola"
     assert calls["n"] == gather.MAX_FETCH
 
 
@@ -165,15 +184,50 @@ def test_gather_website_rejects_domain_resolving_to_a_private_ip():
         raise AssertionError("fetch must not run for a host resolving to a private IP")
 
     result = gather.gather_website(
-        "http://internal.exemplo.pt", fetch=fetch_should_not_run, resolve=lambda host: "10.0.0.5"
+        "http://internal.exemplo.pt", fetch=fetch_should_not_run, resolve=lambda host: ["10.0.0.5"]
     )
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.WEBSITE_BLOCKED_REASON
+
+
+def test_gather_website_rejects_ipv6_only_loopback():
+    def fetch_should_not_run(url):
+        raise AssertionError("fetch must not run for a host resolving only to ::1")
+
+    result = gather.gather_website(
+        "http://ipv6.exemplo.pt", fetch=fetch_should_not_run, resolve=lambda host: ["::1"]
+    )
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.WEBSITE_BLOCKED_REASON
+
+
+def test_gather_website_rejects_when_any_resolved_address_is_private():
+    def fetch_should_not_run(url):
+        raise AssertionError("fetch must not run when any resolved address is private")
+
+    result = gather.gather_website(
+        "http://dualstack.exemplo.pt", fetch=fetch_should_not_run,
+        resolve=lambda host: ["93.184.216.34", "10.0.0.5"],
+    )
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.WEBSITE_BLOCKED_REASON
+
+
+def test_gather_website_blocks_when_resolution_fails():
+    def fetch_should_not_run(url):
+        raise AssertionError("fetch must not run when the host can't be resolved")
+
+    def boom(host):
+        raise OSError("no address associated with hostname")
+
+    result = gather.gather_website("http://naoexiste.exemplo.pt", fetch=fetch_should_not_run, resolve=boom)
     assert isinstance(result, models.NeedsUpload)
     assert result.reason == gather.WEBSITE_BLOCKED_REASON
 
 
 def test_gather_website_allows_a_public_host_resolving_normally():
     result = gather.gather_website(
-        "https://exemplo.pt", fetch=lambda url: _long_html(), resolve=lambda host: "93.184.216.34"
+        "https://exemplo.pt", fetch=lambda url: _long_html(), resolve=lambda host: ["93.184.216.34"]
     )
     assert isinstance(result, models.GatherResult)
 
@@ -203,6 +257,40 @@ def test_http_fetch_rejects_non_text_content_type(monkeypatch):
         def __exit__(self, *a):
             return False
 
-    monkeypatch.setattr(gather.urllib.request, "urlopen", lambda *a, **k: Resp())
+    monkeypatch.setattr(gather.urllib.request, "build_opener", lambda handler: _FakeOpener(Resp()))
     with pytest.raises(gather._UnsupportedContentType):
-        gather._http_fetch("https://exemplo.pt/ficheiro.pdf")
+        gather._http_fetch("https://exemplo.pt/ficheiro.pdf", resolve=lambda host: ["93.184.216.34"])
+
+
+def test_redirect_handler_refuses_a_redirect_to_a_blocked_host():
+    handler = gather._SafeRedirectHandler(resolve=lambda host: ["93.184.216.34"])
+    req = urllib.request.Request("https://exemplo.pt")
+    with pytest.raises(urllib.error.HTTPError):
+        handler.redirect_request(req, None, 302, "Found", {}, "http://127.0.0.1/secret")
+
+
+def test_redirect_handler_allows_a_redirect_to_a_public_host():
+    handler = gather._SafeRedirectHandler(resolve=lambda host: ["93.184.216.34"])
+    req = urllib.request.Request("https://exemplo.pt")
+    new_req = handler.redirect_request(req, None, 302, "Found", {}, "https://outro.exemplo.pt/pagina")
+    assert new_req.full_url == "https://outro.exemplo.pt/pagina"
+
+
+def test_http_fetch_refuses_a_redirect_to_a_blocked_host_end_to_end(monkeypatch):
+    class RedirectingOpener:
+        def __init__(self, handler):
+            self._handler = handler
+
+        def open(self, request, timeout=None):
+            # Mirrors what OpenerDirector does on a 3xx response: it hands the next
+            # hop's URL to the installed redirect handler before following it.
+            self._handler.redirect_request(request, None, 302, "Found", {}, "http://127.0.0.1/secret")
+            raise AssertionError("should never reach a real response")
+
+    monkeypatch.setattr(gather.urllib.request, "build_opener", lambda handler: RedirectingOpener(handler))
+    with pytest.raises(urllib.error.HTTPError):
+        gather._http_fetch("https://exemplo.pt", resolve=lambda host: ["93.184.216.34"])
+
+
+def test_redirect_handler_caps_the_number_of_hops():
+    assert gather._SafeRedirectHandler.max_redirections == gather.MAX_REDIRECTS
