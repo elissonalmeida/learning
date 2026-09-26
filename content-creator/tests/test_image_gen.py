@@ -72,3 +72,27 @@ def test_calculate_cost_matches_gemini_pricing():
     # Gemini 3.1 Flash Image standard pricing: $0.50/1M input, $60.00/1M output.
     assert image_gen.calculate_cost(1_000_000, 0) == pytest.approx(0.50)
     assert image_gen.calculate_cost(0, 1_000_000) == pytest.approx(60.00)
+
+
+def test_card_prompt_asks_for_one_centred_subject_for_the_oval_medallion():
+    prompt = image_gen.build_image_prompt("texto", "marianabotelho-ig", "card")
+    assert "centrado" in prompt
+    assert "oval" in prompt
+    assert "margens" not in prompt  # no empty margin reserved for text any more
+
+
+def test_image_prompt_never_carries_words_that_could_be_painted():
+    for role in ("hero", "card"):
+        prompt = image_gen.build_image_prompt("texto", "marianabotelho-ig", role).lower()
+        assert "@marianabotelho" not in prompt
+        assert "mariana botelho" not in prompt
+        assert "elixir" not in prompt
+        assert "handle" not in prompt
+        assert "cormorant" not in prompt and "lora" not in prompt  # typography stays out
+
+
+def test_image_prompt_keeps_palette_mood_and_botanical_motif():
+    prompt = image_gen.build_image_prompt("texto", "marianabotelho-ig", "card")
+    assert "#efe4d0" in prompt
+    assert "acolhedor" in prompt  # mood keywords
+    assert "botânic" in prompt  # botanical motif, as mood

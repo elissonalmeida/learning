@@ -1,4 +1,5 @@
 import base64
+import re
 from pathlib import Path
 
 from google import genai
@@ -37,14 +38,33 @@ def get_client(api_key):
     return genai.Client(api_key=api_key)
 
 
+# Only these sections of visual-style.md go to the image model: colours and
+# mood. Identity (handle, label text) and typography carry words that the
+# model could end up painting into the image.
+IMAGE_PROMPT_SECTIONS = (
+    "Paleta de cores",
+    "Motivo botânico e moldura",
+    "Palavras-chave de ambiente/mood",
+)
+
+
+def _image_style(brand_pack):
+    doc = load_brand_doc(brand_pack, "visual-style.md")
+    sections = re.split(r"^## ", doc, flags=re.MULTILINE)[1:]
+    return "\n\n".join(
+        section.strip() for section in sections if section.startswith(IMAGE_PROMPT_SECTIONS)
+    )
+
+
 def build_image_prompt(slide_text, brand_pack, slide_role):
-    visual_style = load_brand_doc(brand_pack, "visual-style.md")
+    visual_style = _image_style(brand_pack)
     if slide_role == "hero":
         framing = "Composição de cena completa, ambiente com espaço em redor do assunto principal."
     else:
         framing = (
-            "Composição fechada num único assunto, com espaço vazio numa das "
-            "margens para texto ser sobreposto depois."
+            "Um único assunto, centrado, com um pouco de espaço à volta: a imagem vai "
+            "ser recortada num pequeno medalhão oval, por isso o essencial tem de "
+            "ficar no centro."
         )
     return (
         "Gera uma imagem fotográfica, sem texto nenhum escrito na imagem, que "

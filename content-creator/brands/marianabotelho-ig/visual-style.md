@@ -12,12 +12,14 @@ de imagem) e por `render.py` (para os templates HTML/CSS).
 - **Acento dourado:** `#e6b55c`
 - **Rosa claro:** `#ebb5a2`
 - **Bege claro:** `#e7d1a8`
-- **Moldura escura:** `#2f4d30` (moldura exterior dos cartões, amostrada do cartão publicado)
-- **Texto escuro:** `#14290f` (texto dos cartões sobre o pergaminho, amostrado do cartão publicado)
+- **Moldura escura:** `#2f4d30` (amostrada do cartão publicado)
+- **Texto escuro:** `#14290f` (amostrado do cartão publicado)
 
 ## Identidade
 
 - **Handle:** `@marianabotelho.pt` (aparece em baixo, ao centro, na capa)
+- A moldura oval dos produtos tem escrito "ELIXIR / MARIANA BOTELHO". Esta
+  secção nunca é enviada ao modelo de imagem.
 
 ## Tipografia
 
@@ -29,9 +31,8 @@ de imagem) e por `render.py` (para os templates HTML/CSS).
 ## Motivo botânico e moldura
 
 Ilustrações botânicas em linha fina (plantas, ervas) e uma moldura oval
-dourada/verde-escura com o texto "ELIXIR / MARIANA BOTELHO" — usada como
-referência de composição, não para ser reproduzida literalmente em cada
-imagem.
+dourada/verde-escura — usada como referência de composição, não para ser
+reproduzida literalmente em cada imagem.
 
 ## Palavras-chave de ambiente/mood (para prompts de imagem)
 
