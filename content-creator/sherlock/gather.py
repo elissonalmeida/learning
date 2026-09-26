@@ -142,7 +142,10 @@ def _decode_body(raw, content_encoding, charset):
     if encoding in ("gzip", "x-gzip"):
         raw = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(raw, MAX_FETCH)
     elif encoding == "deflate":
-        raw = zlib.decompressobj().decompress(raw, MAX_FETCH)
+        try:
+            raw = zlib.decompressobj().decompress(raw, MAX_FETCH)
+        except zlib.error:  # many servers send raw deflate without the zlib header
+            raw = zlib.decompressobj(-zlib.MAX_WBITS).decompress(raw, MAX_FETCH)
     return raw[:MAX_FETCH].decode(charset, errors="replace")
 
 

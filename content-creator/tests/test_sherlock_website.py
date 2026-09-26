@@ -390,3 +390,11 @@ def test_decode_body_caps_decompressed_size(monkeypatch):
 
     monkeypatch.setattr(gather, "MAX_FETCH", 100)
     assert len(gather._decode_body(gzip.compress(b"a" * 10_000), "gzip", "utf-8")) == 100
+
+
+def test_decode_body_handles_raw_deflate_without_zlib_header():
+    import zlib
+
+    compressor = zlib.compressobj(wbits=-zlib.MAX_WBITS)
+    raw = compressor.compress("<p>Olá</p>".encode("utf-8")) + compressor.flush()
+    assert gather._decode_body(raw, "deflate", "utf-8") == "<p>Olá</p>"
