@@ -82,6 +82,34 @@ def test_reviewed_draft_survives_reload_and_aprovar_updates_status(tmp_path, mon
     assert db.get_idea(conn2, idea_id)["status"] == "approved"
     conn2.close()
 
+    # The draft section closes and the idea leaves the "reviewed" list right
+    # away, in the same interaction (no second click needed).
+    assert not [b for b in at.button if b.key == f"approve_draft_{idea_id}"]
+    assert any("Sem rascunhos à espera de decisão" in el.value for el in at.info)
+
+
+def test_arquivar_hides_the_button_in_the_same_interaction(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
+    conn.close()
+
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+    assert not at.exception
+
+    at.button(key=f"archive_{idea_id}").click().run()
+
+    assert not at.exception
+    archive_buttons = [b for b in at.button if b.key == f"archive_{idea_id}"]
+    assert archive_buttons == []
+
 
 def test_no_image_returned_shows_gentle_message_and_keeps_prompt_editable(tmp_path, monkeypatch):
     import image_gen

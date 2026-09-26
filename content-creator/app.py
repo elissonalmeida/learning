@@ -271,6 +271,10 @@ with tab_library:
             if idea["archived_at"] is None:
                 if st.button("Arquivar", key=f"archive_{idea['id']}"):
                     db.archive_idea(conn, idea["id"])
+                    st.toast("Ideia arquivada.")
+                    st.rerun()
             else:
                 if st.button("Eliminar definitivamente", key=f"delete_{idea['id']}"):
                     db.hard_delete_idea(conn, idea["id"])
+                    st.toast("Ideia eliminada.")
+                    st.rerun()
