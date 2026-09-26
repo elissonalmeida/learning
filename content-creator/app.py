@@ -64,6 +64,30 @@ def run_with_progress(fn, *args, **kwargs):
             status.update(label="Concluído", state="complete")
             return result
 
+def render_reviewed_draft(conn, idea):
+    """Shows the latest draft of a "reviewed" idea with Aprovar/Rejeitar,
+    loaded straight from the DB so it survives a reload."""
+    draft = db.list_drafts_for_idea(conn, idea["id"])[-1]
+    flags = draft["quality_flags"]
+    st.subheader("Legenda")
+    st.write(draft["caption"])
+    st.subheader("Slides")
+    for i, slide in enumerate(draft["slides"], start=1):
+        st.write(f"**Slide {i}:** {slide}")
+    if flags:
+        remaining = ", ".join(f["criterion"] for f in flags)
+        st.warning(f"Pontos ainda não resolvidos após {draft['round']} ronda(s): {remaining}")
+    col1, col2 = st.columns(2)
+    if col1.button("Aprovar", key=f"approve_draft_{idea['id']}"):
+        db.update_idea_status(conn, idea["id"], "approved")
+        st.toast("Rascunho aprovado.")
+        st.rerun()
+    if col2.button("Rejeitar", key=f"reject_draft_{idea['id']}"):
+        db.update_idea_status(conn, idea["id"], "rejected")
+        st.toast("Rascunho rejeitado.")
+        st.rerun()
+
+
 theme.render_header(f"Content Creator — {cfg.brand_pack}")
 
 tab_new, tab_images, tab_library = st.tabs(["Nova Ideia", "Gerar Imagens", "Biblioteca"])
@@ -124,44 +148,27 @@ with tab_new:
         tone = st.selectbox("Tom", TONES, index=tone_index)
         if st.button("Gerar rascunho"):
             try:
-                draft, flags, rounds = run_with_progress(
+                run_with_progress(
                     pipeline.run_generation_pipeline,
                     client, conn, chosen_idea, tone, cfg.brand_pack, cfg.max_daily_spend_usd,
                 )
             except pipeline.DailyBudgetExceededError as e:
                 st.error(str(e))
             else:
-                st.session_state["current_result"] = {
-                    "draft": draft,
-                    "flags": flags,
-                    "rounds": rounds,
-                    "idea": chosen_idea,
-                }
+                st.rerun()
     else:
         st.info("Sem ideias pendentes. Cria uma acima.")
 
-    # Rendered outside the "Gerar rascunho" button block so the Aprovar/Rejeitar
-    # buttons survive the rerun a nested button click would otherwise discard.
-    if "current_result" in st.session_state:
-        result = st.session_state["current_result"]
-        draft, flags, rounds, idea = (
-            result["draft"], result["flags"], result["rounds"], result["idea"],
+    st.subheader("Rascunhos à espera da tua decisão")
+    reviewed = db.list_ideas(conn, brand_pack=cfg.brand_pack, status="reviewed")
+    if reviewed:
+        reviewed_options = {f"#{i['id']} — {i['topic']}": i for i in reviewed}
+        reviewed_label = st.selectbox(
+            "Rascunho", list(reviewed_options.keys()), key="reviewed_idea_select",
         )
-        st.subheader("Legenda")
-        st.write(draft["caption"])
-        st.subheader("Slides")
-        for i, slide in enumerate(draft["slides"], start=1):
-            st.write(f"**Slide {i}:** {slide}")
-        if flags:
-            remaining = ", ".join(f["criterion"] for f in flags)
-            st.warning(f"Pontos ainda não resolvidos após {rounds} ronda(s): {remaining}")
-        col1, col2 = st.columns(2)
-        if col1.button("Aprovar"):
-            db.update_idea_status(conn, idea["id"], "approved")
-            del st.session_state["current_result"]
-        if col2.button("Rejeitar"):
-            db.update_idea_status(conn, idea["id"], "rejected")
-            del st.session_state["current_result"]
+        render_reviewed_draft(conn, reviewed_options[reviewed_label])
+    else:
+        st.info("Sem rascunhos à espera de decisão.")
 
 with tab_images:
     st.subheader("Gerar Imagens do Carrossel")

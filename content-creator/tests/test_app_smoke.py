@@ -46,6 +46,41 @@ def test_images_tab_renders_for_approved_idea_with_draft(tmp_path, monkeypatch):
     assert not at.exception
 
 
+def test_reviewed_draft_survives_reload_and_aprovar_updates_status(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
+    db.update_idea_status(conn, idea_id, "reviewed")
+    db.create_draft(
+        conn, idea_id, 0, "Legenda de teste", ["Slide 1", "Slide 2"],
+        quality_flags=[{"criterion": "Hook", "issue": "fraco"}],
+    )
+    conn.close()
+
+    # Fresh AppTest run (simulates a reload): no session state carried over.
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+
+    assert not at.exception
+    caption_blocks = [el.value for el in at.markdown if "Legenda de teste" in el.value]
+    assert caption_blocks or any("Legenda de teste" in w.value for w in at.text)
+
+    aprovar_buttons = [b for b in at.button if b.label == "Aprovar"]
+    assert len(aprovar_buttons) == 1
+    aprovar_buttons[0].click().run()
+
+    assert not at.exception
+    conn2 = db.get_connection(str(db_path))
+    assert db.get_idea(conn2, idea_id)["status"] == "approved"
+    conn2.close()
+
+
 def test_carousel_preview_renders_when_all_slides_approved(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
