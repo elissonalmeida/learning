@@ -1,7 +1,14 @@
 import tomllib
 from pathlib import Path
+from unittest.mock import patch
+
+import streamlit.config as st_config
+from streamlit.testing.v1 import AppTest
+
+import theme
 
 CONFIG_PATH = Path(__file__).parent.parent / ".streamlit" / "config.toml"
+APP_PATH = str(Path(__file__).parent.parent / "app.py")
 
 
 def test_config_toml_sets_aura_palette_and_fonts():
@@ -22,6 +29,7 @@ def test_config_toml_sets_aura_palette_and_fonts():
     assert theme_cfg["blueColor"] == "#185FA5"
     assert theme_cfg["violetColor"] == "#534AB7"
     assert theme_cfg["grayColor"] == "#8B6A4A"
+    assert theme_cfg["yellowColor"] == "#C4922A"
 
 
 def test_config_toml_hides_default_toolbar():
@@ -29,9 +37,20 @@ def test_config_toml_hides_default_toolbar():
         config = tomllib.load(f)
 
     assert config["client"]["toolbarMode"] == "minimal"
-from unittest.mock import patch
 
-import theme
+
+def test_config_toml_is_valid_for_the_installed_streamlit():
+    """Loads config.toml through Streamlit's own config machinery (not just
+    tomllib), so a key Streamlit rejects or ignores would be caught."""
+    with open(CONFIG_PATH, "rb") as f:
+        raw_theme = tomllib.load(f)["theme"]
+
+    valid_options = st_config.get_config_options(force_reparse=True)
+    for key in raw_theme:
+        assert f"theme.{key}" in valid_options, f"theme.{key} is not a valid Streamlit config option"
+
+    assert st_config.get_option("theme.yellowColor") == "#C4922A"
+    assert st_config.get_where_defined("theme.yellowColor") == str(CONFIG_PATH)
 
 
 def test_inject_theme_renders_header_css_with_unsafe_html():
@@ -49,14 +68,18 @@ def test_render_header_includes_title_text_and_class():
         theme.render_header("Content Creator — marianabotelho-ig")
 
     mock_st.markdown.assert_called_once()
-    html = mock_st.markdown.call_args[0][0]
-    assert "app-header-title" in html
-    assert "Content Creator — marianabotelho-ig" in html
-from pathlib import Path
+    html_out = mock_st.markdown.call_args[0][0]
+    assert "app-header-title" in html_out
+    assert "Content Creator — marianabotelho-ig" in html_out
 
-from streamlit.testing.v1 import AppTest
 
-APP_PATH = str(Path(__file__).parent.parent / "app.py")
+def test_render_header_escapes_html_in_title():
+    with patch("theme.st") as mock_st:
+        theme.render_header("<script>alert(1)</script>")
+
+    html_out = mock_st.markdown.call_args[0][0]
+    assert "<script>" not in html_out
+    assert "&lt;script&gt;" in html_out
 
 
 def test_app_renders_custom_header_instead_of_default_title(tmp_path, monkeypatch):
