@@ -1,0 +1,63 @@
+name: Regression tests
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * *"   # nightly, 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: content-creator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: content-creator/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps chromium
+      - name: Run full suite
+        run: python -m pytest -q --no-header 2>&1 | tee ../pytest.log; exit ${PIPESTATUS[0]}
+      - name: Keep the log when tests fail
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-log
+          path: pytest.log
+
+  triage:
+    needs: test
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pytest-log
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: >-
+            --allowedTools "Read,Grep,Glob,Bash(gh issue list:*),Bash(gh issue create:*),Bash(gh issue comment:*)"
+          prompt: |
+            The regression suite failed for commit ${{ github.sha }}
+            (run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+            The pytest output is in pytest.log; the code is in content-creator/.
+            1. Read the log and the failing tests and code. Find the most likely root cause.
+            2. Run `gh issue list --label regression --state open` first. If an open issue
+               already covers the same failure, add a short comment with this run's link instead
+               of creating a new one.
+            3. Otherwise create ONE issue with `gh issue create --label bug --label regression`:
+               title naming the failing test(s); body with what failed, likely cause,
+               the suspect file/commit, and the run link. Keep it short and plain.
+            Do not modify any code.
