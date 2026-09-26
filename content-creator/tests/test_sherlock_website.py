@@ -1,3 +1,5 @@
+import email.message
+import io
 import urllib.error
 import urllib.request
 
@@ -322,3 +324,42 @@ def test_gather_website_allows_a_real_public_ip():
         "https://exemplo.pt", fetch=lambda url: _long_html(), resolve=lambda host: ["8.8.8.8"]
     )
     assert isinstance(result, models.GatherResult)
+
+
+class _FakeHTTPHandler(urllib.request.HTTPHandler):
+    """Subclassing HTTPHandler (not plain BaseHandler) so build_opener recognises
+    this as already providing http:// support and skips adding the real one --
+    otherwise the real HTTPHandler would also be installed and could attempt an
+    actual network connection."""
+
+    def __init__(self):
+        super().__init__()
+        self.requests = []
+
+    def http_open(self, req):
+        self.requests.append(req.full_url)
+        if req.full_url == "http://exemplo.pt/":
+            headers = email.message.Message()
+            headers["Location"] = "http://127.0.0.1/secret"
+            resp = urllib.request.addinfourl(io.BytesIO(b""), headers, req.full_url, 302)
+            resp.msg = "Found"
+            return resp
+        headers = email.message.Message()
+        headers["Content-Type"] = "text/plain"
+        resp = urllib.request.addinfourl(io.BytesIO(b"segredo"), headers, req.full_url, 200)
+        resp.msg = "OK"
+        return resp
+
+
+def test_real_opener_with_safe_redirect_handler_refuses_redirect_to_a_private_host():
+    """End-to-end through real urllib.request.OpenerDirector machinery (no network):
+    a fake http:// handler serves a 302 to a private host, and _SafeRedirectHandler
+    must refuse to follow it -- the fake handler's second URL must never be requested."""
+    fake_http = _FakeHTTPHandler()
+    redirect_handler = gather._SafeRedirectHandler(resolve=lambda host: ["93.184.216.34"])
+    opener = urllib.request.build_opener(fake_http, redirect_handler)
+
+    with pytest.raises(urllib.error.HTTPError):
+        opener.open(urllib.request.Request("http://exemplo.pt/"))
+
+    assert fake_http.requests == ["http://exemplo.pt/"]
