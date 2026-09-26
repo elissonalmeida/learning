@@ -208,7 +208,7 @@ def _build_card_html(slide_text, image_b64, palette, is_last):
     arrow_html = "" if is_last else (
         f'<svg id="arrow" viewBox="0 0 60 16" style="position:absolute;right:6%;bottom:4.5%;'
         f'width:{_base_px(110)}px;"><path d="M1 8H57M49 1.5L57 8L49 14.5" fill="none" '
-        f'stroke="{gold}" stroke-width="1.8" stroke-linecap="round" '
+        f'stroke="{gold}" stroke-width="2.6" stroke-linecap="round" '
         'stroke-linejoin="round"/></svg>'
     )
     medallion = MEDALLION_WIDTH_PCT
