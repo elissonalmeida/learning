@@ -25,8 +25,10 @@ def make_fake_image_gen(cost=0.07):
     return SimpleNamespace(generate_image=generate_image)
 
 
-def make_fake_render():
-    def build_slide_html(slide_text, image_bytes, brand_pack, slide_role):
+def make_fake_render(calls=None):
+    def build_slide_html(slide_text, image_bytes, brand_pack, slide_role, is_last=False):
+        if calls is not None:
+            calls.append({"text": slide_text, "image": image_bytes, "role": slide_role, "is_last": is_last})
         return f"<html>{slide_role}:{slide_text}</html>"
 
     def render_png(html):
@@ -123,7 +125,7 @@ def test_generate_slide_image_logs_cost_and_raises_when_gemini_returns_no_image(
 
 
 def test_on_step_reports_error_when_render_fails(conn, idea, tmp_path):
-    def failing_render(slide_text, image_bytes, brand_pack, slide_role):
+    def failing_render(slide_text, image_bytes, brand_pack, slide_role, is_last=False):
         raise ValueError("contraste insuficiente")
 
     fake_render = SimpleNamespace(build_slide_html=failing_render, render_png=lambda html: b"x")
@@ -202,3 +204,64 @@ def test_ensure_image_folder_keeps_overlong_saved_folder_that_already_exists(con
     db.set_idea_image_folder(conn, idea["id"], legacy)
     idea = db.get_idea(conn, idea["id"])
     assert pipeline.ensure_image_folder(conn, idea, tmp_path) == legacy
+
+
+def test_generate_slide_image_keeps_the_raw_image_next_to_the_slide(conn, idea, tmp_path):
+    row = pipeline.generate_slide_image(
+        None, conn, idea, 3, "card", "texto", "prompt", tmp_path, 2.0,
+        image_gen_module=make_fake_image_gen(), render_module=make_fake_render(),
+    )
+    background = Path(row["file_path"]).with_name("slide-03-bg.png")
+    assert background.read_bytes() == b"fake-image-bytes"
+
+
+def test_generate_slide_image_passes_is_last_to_the_layout(conn, idea, tmp_path):
+    calls = []
+    pipeline.generate_slide_image(
+        None, conn, idea, 4, "card", "texto", "prompt", tmp_path, 2.0,
+        image_gen_module=make_fake_image_gen(), render_module=make_fake_render(calls), is_last=True,
+    )
+    assert calls[-1]["is_last"] is True
+
+
+def test_rerender_slide_image_reuses_saved_background_without_any_api_call(conn, idea, tmp_path):
+    first = pipeline.generate_slide_image(
+        None, conn, idea, 1, "card", "texto antigo", "o prompt", tmp_path, 2.0,
+        image_gen_module=make_fake_image_gen(), render_module=make_fake_render(),
+    )
+    calls_before = conn.execute("SELECT COUNT(*) FROM api_calls").fetchone()[0]
+    calls = []
+
+    row = pipeline.rerender_slide_image(
+        conn, db.get_idea(conn, idea["id"]), 1, "card", "texto novo", tmp_path, True,
+        render_module=make_fake_render(calls),
+    )
+
+    assert conn.execute("SELECT COUNT(*) FROM api_calls").fetchone()[0] == calls_before
+    assert row["id"] != first["id"]
+    assert row["cost_usd"] == 0
+    assert row["status"] == "pending"
+    assert row["prompt"] == "o prompt"
+    assert calls == [{"text": "texto novo", "image": b"fake-image-bytes", "role": "card", "is_last": True}]
+    assert Path(row["file_path"]).read_bytes() == b"fake-png-bytes"
+    assert len(db.list_slide_images(conn, idea["id"])) == 2
+
+
+def test_rerender_slide_image_without_saved_background_raises_gentle_error(conn, idea, tmp_path):
+    import tone_guard
+
+    with pytest.raises(pipeline.NoSavedBackgroundError) as excinfo:
+        pipeline.rerender_slide_image(
+            conn, idea, 0, "hero", "texto", tmp_path, False, render_module=make_fake_render(),
+        )
+    assert tone_guard.find_harsh_words(str(excinfo.value)) == []
+    assert db.list_slide_images(conn, idea["id"]) == []
+
+
+def test_rerender_slide_image_raises_when_folder_exists_but_background_is_missing(conn, idea, tmp_path):
+    pipeline.ensure_image_folder(conn, idea, tmp_path)
+    with pytest.raises(pipeline.NoSavedBackgroundError):
+        pipeline.rerender_slide_image(
+            conn, db.get_idea(conn, idea["id"]), 2, "card", "texto", tmp_path, False,
+            render_module=make_fake_render(),
+        )

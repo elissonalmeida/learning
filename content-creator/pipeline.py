@@ -14,6 +14,10 @@ class DailyBudgetExceededError(Exception):
     pass
 
 
+class NoSavedBackgroundError(Exception):
+    pass
+
+
 def _invoke(conn, idea_id, daily_cap_usd, function_name, ai_call, on_step=None):
     if on_step:
         on_step(function_name, "running")
@@ -114,7 +118,7 @@ def ensure_image_folder(conn, idea, images_root, storage_module=storage):
 def generate_slide_image(
     gemini_client, conn, idea, slide_index, slide_role, slide_text, prompt,
     images_root, daily_cap_usd, image_gen_module=image_gen, render_module=render,
-    storage_module=storage, on_step=None,
+    storage_module=storage, on_step=None, is_last=False,
 ):
     idea_id = idea["id"]
 
@@ -144,11 +148,31 @@ def generate_slide_image(
         on_step("generate_image", "done")
 
     folder = ensure_image_folder(conn, idea, images_root, storage_module=storage_module)
+    # Keep the raw image so the layout can be redone later without paying again.
+    _background_path(images_root, folder, slide_index).write_bytes(image_bytes)
 
+    file_path = _render_slide(
+        idea, folder, slide_index, slide_role, slide_text, image_bytes, images_root, is_last,
+        render_module, on_step,
+    )
+    slide_image_id = db.create_slide_image(conn, idea_id, slide_index, prompt, str(file_path), cost)
+    return db.get_slide_image(conn, slide_image_id)
+
+
+def _background_path(images_root, folder, slide_index):
+    return Path(images_root) / folder / f"slide-{slide_index:02d}-bg.png"
+
+
+def _render_slide(
+    idea, folder, slide_index, slide_role, slide_text, image_bytes, images_root, is_last,
+    render_module, on_step,
+):
     if on_step:
         on_step("render_image", "running")
     try:
-        html = render_module.build_slide_html(slide_text, image_bytes, idea["brand_pack"], slide_role)
+        html = render_module.build_slide_html(
+            slide_text, image_bytes, idea["brand_pack"], slide_role, is_last=is_last,
+        )
         png_bytes = render_module.render_png(html)
         file_path = Path(images_root) / folder / f"slide-{slide_index:02d}.png"
         file_path.write_bytes(png_bytes)
@@ -158,8 +182,29 @@ def generate_slide_image(
         raise
     if on_step:
         on_step("render_image", "done")
+    return file_path
 
-    slide_image_id = db.create_slide_image(conn, idea_id, slide_index, prompt, str(file_path), cost)
+
+def rerender_slide_image(
+    conn, idea, slide_index, slide_role, slide_text, images_root, is_last,
+    render_module=render, on_step=None,
+):
+    """Redo a slide's layout from its saved raw image — no API call, no cost.
+    Adds a new pending slide_images row, like "Gerar novamente" does."""
+    folder = idea.get("image_folder")
+    background = _background_path(images_root, folder, slide_index) if folder else None
+    if background is None or not background.is_file():
+        raise NoSavedBackgroundError(
+            "Ainda não há uma imagem guardada para este slide, por isso não dá para refazer "
+            "só o layout. Podes gerar a imagem primeiro e depois refazer à vontade."
+        )
+    file_path = _render_slide(
+        idea, folder, slide_index, slide_role, slide_text, background.read_bytes(), images_root,
+        is_last, render_module, on_step,
+    )
+    previous = [r for r in db.list_slide_images(conn, idea["id"]) if r["slide_index"] == slide_index]
+    prompt = previous[-1]["prompt"] if previous else ""
+    slide_image_id = db.create_slide_image(conn, idea["id"], slide_index, prompt, str(file_path), 0)
     return db.get_slide_image(conn, slide_image_id)
 
 
