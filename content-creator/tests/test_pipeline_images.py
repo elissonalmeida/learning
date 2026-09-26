@@ -2,6 +2,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import pytest
 import db
+import image_gen
 import pipeline
 
 
@@ -83,6 +84,27 @@ def test_generate_slide_image_reports_progress_via_on_step(conn, idea, tmp_path)
         ("generate_image", "running"), ("generate_image", "done"),
         ("render_image", "running"), ("render_image", "done"),
     ]
+
+
+def test_generate_slide_image_logs_cost_and_raises_when_gemini_returns_no_image(conn, idea, tmp_path):
+    def no_image(client, prompt):
+        raise image_gen.NoImageReturned(tokens_in=50, tokens_out=10, cost=0.03)
+
+    fake_image_gen = SimpleNamespace(generate_image=no_image)
+    events = []
+
+    with pytest.raises(image_gen.NoImageReturned):
+        pipeline.generate_slide_image(
+            None, conn, idea, 0, "hero", "texto", "prompt", tmp_path, 2.0,
+            image_gen_module=fake_image_gen, render_module=make_fake_render(),
+            on_step=lambda step, status, detail=None: events.append((step, status)),
+        )
+
+    row = conn.execute("SELECT * FROM api_calls WHERE idea_id = ?", (idea["id"],)).fetchone()
+    assert row is not None
+    assert row["function"] == "generate_image"
+    assert row["estimated_cost_usd"] == pytest.approx(0.03)
+    assert events[-1] == ("generate_image", "error")
 
 
 def test_on_step_reports_error_when_render_fails(conn, idea, tmp_path):

@@ -120,6 +120,11 @@ def generate_slide_image(
         raise error
     try:
         image_bytes, tokens_in, tokens_out, cost = image_gen_module.generate_image(gemini_client, prompt)
+    except image_gen.NoImageReturned as e:
+        db.log_api_call(conn, "generate_image", e.tokens_in, e.tokens_out, e.cost, idea_id=idea_id)
+        if on_step:
+            on_step("generate_image", "error", str(e))
+        raise
     except Exception as e:
         if on_step:
             on_step("generate_image", "error", str(e))

@@ -1,5 +1,7 @@
 import base64
 from pathlib import Path
+
+import pytest
 from streamlit.testing.v1 import AppTest
 
 import db
@@ -78,6 +80,47 @@ def test_reviewed_draft_survives_reload_and_aprovar_updates_status(tmp_path, mon
     assert not at.exception
     conn2 = db.get_connection(str(db_path))
     assert db.get_idea(conn2, idea_id)["status"] == "approved"
+    conn2.close()
+
+
+def test_no_image_returned_shows_gentle_message_and_keeps_prompt_editable(tmp_path, monkeypatch):
+    import image_gen
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
+    db.update_idea_status(conn, idea_id, "approved")
+    db.create_draft(conn, idea_id, 0, "Legenda de teste", ["Slide 1", "Slide 2"])
+    conn.close()
+
+    def no_image(client, prompt):
+        raise image_gen.NoImageReturned(tokens_in=50, tokens_out=10, cost=0.03)
+
+    monkeypatch.setattr(image_gen, "generate_image", no_image)
+
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+    assert not at.exception
+
+    at.button(key="generate_0").click().run()
+
+    assert not at.exception
+    assert any(
+        "Desta vez não veio imagem" in e.value for e in at.error
+    )
+    # The prompt textarea must still be there to edit and retry.
+    assert at.text_area(key="prompt_area_1_0")
+
+    conn2 = db.get_connection(str(db_path))
+    row = conn2.execute("SELECT * FROM api_calls WHERE idea_id = ?", (idea_id,)).fetchone()
+    assert row is not None
+    assert row["estimated_cost_usd"] == pytest.approx(0.03)
     conn2.close()
 
 

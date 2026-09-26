@@ -13,6 +13,18 @@ PRICE_PER_OUTPUT_TOKEN = 60.00 / 1_000_000
 BRANDS_DIR = Path(__file__).parent / "brands"
 
 
+class NoImageReturned(Exception):
+    """Raised when Gemini's response has no image, e.g. because the prompt was
+    blocked. Carries the tokens/cost of the (already paid-for) call so the
+    caller can still log the spend before surfacing the error."""
+
+    def __init__(self, tokens_in, tokens_out, cost):
+        super().__init__("Gemini não devolveu nenhuma imagem para este pedido.")
+        self.tokens_in = tokens_in
+        self.tokens_out = tokens_out
+        self.cost = cost
+
+
 def load_brand_doc(brand_pack, filename):
     return (BRANDS_DIR / brand_pack / filename).read_text(encoding="utf-8")
 
@@ -44,7 +56,10 @@ def build_image_prompt(slide_text, brand_pack, slide_role):
 
 def generate_image(client, prompt):
     interaction = client.interactions.create(model=MODEL, input=prompt)
-    image_bytes = base64.b64decode(interaction.output_image.data)
     tokens_in = interaction.usage.total_input_tokens
     tokens_out = interaction.usage.total_output_tokens
-    return image_bytes, tokens_in, tokens_out, calculate_cost(tokens_in, tokens_out)
+    cost = calculate_cost(tokens_in, tokens_out)
+    if interaction.output_image is None or interaction.output_image.data is None:
+        raise NoImageReturned(tokens_in, tokens_out, cost)
+    image_bytes = base64.b64decode(interaction.output_image.data)
+    return image_bytes, tokens_in, tokens_out, cost

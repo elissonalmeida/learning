@@ -222,6 +222,11 @@ with tab_images:
                         )
                     except pipeline.DailyBudgetExceededError as e:
                         st.error(str(e))
+                    except image_gen.NoImageReturned:
+                        st.error(
+                            "Desta vez não veio imagem. Tenta gerar outra vez, "
+                            "ou ajusta um pouco o prompt."
+                        )
                     else:
                         st.session_state[f"show_prompt_{idea['id']}_{i}"] = False
                         st.rerun()
