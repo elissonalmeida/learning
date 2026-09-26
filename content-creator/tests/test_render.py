@@ -200,3 +200,113 @@ def test_long_hero_title_shrinks_to_three_lines_without_going_below_minimum():
     assert fit["hero_title_px"] < render.START_FONT_PX["hero_title"]
     assert fit["hero_title_px"] >= render.MIN_FONT_PX["hero_title"]
     assert fit["overflow"] is False
+
+
+# --- review round: long words, hero subtitle, honest contrast, brand keys, offline fonts ---
+
+def _solid_png_bytes(colour):
+    buffer = io.BytesIO()
+    Image.new("RGB", (64, 80), colour).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def test_a_very_long_single_word_is_broken_inside_the_panel():
+    _, fit = _render("Palavra\n\n" + "Supercalifragilístico" * 5, "card")
+    assert fit["overflow"] is False
+
+
+def test_very_long_card_text_reports_overflow():
+    _, fit = _render(SATURNO_LONG + (" " + SATURNO_LONG.split("\n\n")[1]) * 3, "card")
+    assert fit["overflow"] is True
+
+
+def test_long_hero_subtitle_shrinks_to_fit():
+    subtitle = "O que é, para que serve, como se usa no dia a dia e porque faz sentido para ti."
+    _, fit = _render(f"Elixir\n\n{subtitle}", "hero")
+    assert render.MIN_FONT_PX["body"] <= fit["hero_subtitle_px"] < render.START_FONT_PX["hero_subtitle"]
+    assert fit["overflow"] is False
+
+
+def test_hero_subtitle_too_long_even_at_minimum_reports_overflow():
+    subtitle = "Uma frase comprida que continua e continua. " * 6
+    _, fit = _render(f"Elixir\n\n{subtitle}", "hero")
+    assert fit["overflow"] is True
+
+
+def _blend(fg, bg, alpha):
+    f = [int(fg[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(bg[i:i + 2], 16) for i in (1, 3, 5)]
+    return tuple(round(alpha * x + (1 - alpha) * y) for x, y in zip(f, b))
+
+
+def test_hero_scrim_is_at_full_strength_behind_the_title_and_the_bottom_text():
+    palette = render.load_palette(BRAND)
+    fit = {}
+    png = render.render_png(
+        render.build_slide_html(
+            "Alquimia do corpo: os sete metais planetários e os órgãos\n\nO que é. Para que serve.",
+            _solid_png_bytes("#ffffff"), BRAND, "hero",
+        ),
+        fit=fit,
+    )
+    image = Image.open(io.BytesIO(png)).convert("RGB")
+    expected = _blend(palette["Moldura escura"], "#ffffff", render.SCRIM_ALPHA)
+    for top, bottom in (fit["boxes"]["hero-title"], fit["boxes"]["hero-bottom"]):
+        for y in (top, (top + bottom) / 2, bottom - 1):
+            pixel = image.getpixel((4, int(y)))
+            assert all(abs(p - e) <= 3 for p, e in zip(pixel, expected)), (y, pixel, expected)
+
+
+def test_hero_contrast_check_accounts_for_scrim_strength_and_handle_opacity(monkeypatch):
+    palette = render.load_palette(BRAND)
+    # Passes against the plain scrim colour (5.1:1) but not once the scrim is
+    # blended over a white image and the handle is drawn at its opacity.
+    assert render.contrast_ratio(palette["Fundo (pergaminho)"], "#3a5c3c") >= 4.5
+    monkeypatch.setattr(render, "load_palette", lambda brand_pack: {**palette, "Moldura escura": "#3a5c3c"})
+    with pytest.raises(render.LowContrastError):
+        render.build_slide_html("Título", FAKE_IMAGE, BRAND, "hero")
+
+
+@pytest.mark.parametrize("role, key", [
+    ("hero", "Handle"), ("hero", "Moldura escura"), ("card", "Moldura escura"), ("card", "Texto escuro"),
+])
+def test_missing_brand_key_raises_a_clear_error(monkeypatch, role, key):
+    palette = render.load_palette(BRAND)
+    del palette[key]
+    monkeypatch.setattr(render, "load_palette", lambda brand_pack: palette)
+    with pytest.raises(render.BrandPackError) as excinfo:
+        render.build_slide_html("Título\n\nCorpo", FAKE_IMAGE, BRAND, role)
+    message = str(excinfo.value)
+    assert key in message
+    assert f"brands/{BRAND}/visual-style.md" in message
+
+
+@pytest.mark.parametrize("role", ["hero", "card"])
+def test_slide_html_embeds_local_fonts_and_never_calls_google_fonts(role):
+    html = render.build_slide_html("Título\n\nCorpo", FAKE_IMAGE, BRAND, role)
+    assert "fonts.googleapis.com" not in html
+    assert "fonts.gstatic.com" not in html
+    assert "@font-face" in html
+
+
+def test_render_works_offline_with_the_bundled_fonts(monkeypatch):
+    import socket
+
+    real_connect = socket.socket.connect
+
+    def local_only(self, address):
+        if isinstance(address, tuple) and address[0] not in ("127.0.0.1", "::1", "localhost"):
+            raise OSError("rede bloqueada neste teste")
+        return real_connect(self, address)
+
+    monkeypatch.setattr(socket.socket, "connect", local_only)
+    for role, fonts in (("hero", {"Cormorant Garamond"}), ("card", {"Cormorant Garamond", "Lora"})):
+        png, fit = _render("Título\n\nCorpo do texto.", role)
+        assert Image.open(io.BytesIO(png)).size == (render.OUTPUT_WIDTH, render.OUTPUT_HEIGHT)
+        assert fonts <= set(fit["fonts_loaded"])
+
+
+def test_font_licences_are_bundled_with_the_fonts():
+    fonts = Path(render.__file__).parent / "assets" / "fonts"
+    for name in ("CormorantGaramond", "Lora"):
+        assert (fonts / f"OFL-{name}.txt").read_text(encoding="utf-8").count("Open Font License") >= 1
