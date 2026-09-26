@@ -365,3 +365,21 @@ def test_invoke_logs_cost_exactly_once_for_a_non_json_response(conn):
         )
 
     assert db.get_spend_today(conn) == pytest.approx(ai.calculate_cost(300, 50))
+
+
+def test_invoke_logs_cost_exactly_once_when_the_response_has_no_text_block(conn):
+    """The response only holds non-text blocks (e.g. thinking), so ai._call_claude
+    raises InvalidAIResponseError carrying the already-billed call's usage."""
+    from unittest.mock import MagicMock
+
+    client = _fake_claude_response("ignorado", tokens_in=250, tokens_out=40)
+    client.messages.create.return_value.content = [MagicMock(type="thinking")]
+    assert db.get_spend_today(conn) == 0
+
+    with pytest.raises(ai.InvalidAIResponseError):
+        pipeline.run_extraction(
+            client=client, conn=conn, reference_text="texto qualquer",
+            brand_pack="marianabotelho-ig", daily_cap_usd=2.0,
+        )
+
+    assert db.get_spend_today(conn) == pytest.approx(ai.calculate_cost(250, 40))

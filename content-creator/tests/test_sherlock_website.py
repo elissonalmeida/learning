@@ -308,6 +308,15 @@ def test_is_blocked_ip_blocks_carrier_grade_nat_and_allows_a_real_public_ip():
     assert gather._is_blocked_ip(ipaddress.ip_address("8.8.8.8")) is False
 
 
+def test_is_blocked_ip_unwraps_ipv4_mapped_ipv6_addresses():
+    import ipaddress
+
+    # ::ffff:a.b.c.d must be judged as the IPv4 address it carries.
+    for mapped in ("::ffff:127.0.0.1", "::ffff:10.0.0.1", "::ffff:100.64.0.1", "::ffff:169.254.169.254"):
+        assert gather._is_blocked_ip(ipaddress.ip_address(mapped)) is True, mapped
+    assert gather._is_blocked_ip(ipaddress.ip_address("::ffff:8.8.8.8")) is False
+
+
 def test_gather_website_rejects_carrier_grade_nat_address():
     def fetch_should_not_run(url):
         raise AssertionError("fetch must not run for a CGNAT address")
