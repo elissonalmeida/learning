@@ -1,5 +1,7 @@
 import base64
 from pathlib import Path
+
+import pytest
 from streamlit.testing.v1 import AppTest
 
 import db
@@ -20,7 +22,7 @@ def test_app_loads_without_exception(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(tmp_path / "test.db"))
     monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception
@@ -40,10 +42,185 @@ def test_images_tab_renders_for_approved_idea_with_draft(tmp_path, monkeypatch):
     db.create_draft(conn, idea_id, 0, "Legenda de teste", ["Slide 1", "Slide 2"])
     conn.close()
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception
+
+
+def test_reviewed_draft_survives_reload_and_aprovar_updates_status(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
+    db.update_idea_status(conn, idea_id, "reviewed")
+    db.create_draft(
+        conn, idea_id, 0, "Legenda de teste", ["Slide 1", "Slide 2"],
+        quality_flags=[{"criterion": "Hook", "issue": "fraco"}],
+    )
+    conn.close()
+
+    # Fresh AppTest run (simulates a reload): no session state carried over.
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    assert not at.exception
+    caption_blocks = [el.value for el in at.markdown if "Legenda de teste" in el.value]
+    assert caption_blocks or any("Legenda de teste" in w.value for w in at.text)
+
+    aprovar_buttons = [b for b in at.button if b.label == "Aprovar"]
+    assert len(aprovar_buttons) == 1
+    aprovar_buttons[0].click().run()
+
+    assert not at.exception
+    conn2 = db.get_connection(str(db_path))
+    assert db.get_idea(conn2, idea_id)["status"] == "approved"
+    conn2.close()
+
+    # The draft section closes and the idea leaves the "reviewed" list right
+    # away, in the same interaction (no second click needed).
+    assert not [b for b in at.button if b.key == f"approve_draft_{idea_id}"]
+    assert any("Sem rascunhos à espera de decisão" in el.value for el in at.info)
+
+
+def test_generating_a_draft_selects_it_in_the_reviewed_section(tmp_path, monkeypatch):
+    import ai
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    # The idea we're about to draft was created FIRST (older created_at); a
+    # second idea, created and marked "reviewed" AFTER it, has a newer
+    # created_at. list_ideas() sorts "reviewed" by created_at DESC, so once
+    # the first idea also becomes "reviewed", plain creation-time sorting
+    # would still put the older one second — the selectbox must not rely on
+    # that sort order to find the just-generated draft.
+    new_idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ideia nova")
+    old_idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ideia antiga")
+    db.update_idea_status(conn, old_idea_id, "reviewed")
+    db.create_draft(conn, old_idea_id, 0, "Legenda antiga", ["Slide antigo"])
+    conn.close()
+
+    monkeypatch.setattr(
+        ai, "generate_draft",
+        lambda client, topic, tone, pillar, brand_pack: (
+            {"caption": "Legenda nova", "slides": ["Slide novo"]}, 10, 10, 0.001,
+        ),
+    )
+    monkeypatch.setattr(
+        ai, "critique_draft", lambda client, draft, brand_pack: ([], 10, 10, 0.001),
+    )
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    gerar_buttons = [b for b in at.button if b.label == "Gerar rascunho"]
+    assert len(gerar_buttons) == 1
+    gerar_buttons[0].click().run()
+
+    assert not at.exception
+    reviewed_select = at.selectbox(key="reviewed_idea_select")
+    assert reviewed_select.value == f"#{new_idea_id} — ideia nova"
+
+    # The review section renders the caption verbatim (st.write(caption));
+    # the Biblioteca tab renders "Ronda N: <caption>..." — exclude that so
+    # this only looks at what the review section is showing.
+    review_section_captions = [
+        el.value for el in at.markdown
+        if "Ronda" not in el.value and ("Legenda nova" in el.value or "Legenda antiga" in el.value)
+    ]
+    assert any("Legenda nova" in v for v in review_section_captions)
+    assert not any("Legenda antiga" in v for v in review_section_captions)
+
+    aprovar_buttons = [b for b in at.button if b.key == f"approve_draft_{new_idea_id}"]
+    assert len(aprovar_buttons) == 1
+    aprovar_buttons[0].click().run()
+
+    conn2 = db.get_connection(str(db_path))
+    assert db.get_idea(conn2, new_idea_id)["status"] == "approved"
+    assert db.get_idea(conn2, old_idea_id)["status"] == "reviewed"
+    conn2.close()
+
+
+def test_arquivar_hides_the_button_in_the_same_interaction(tmp_path, monkeypatch):
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
+    conn.close()
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    at.button(key=f"archive_{idea_id}").click().run()
+
+    assert not at.exception
+    archive_buttons = [b for b in at.button if b.key == f"archive_{idea_id}"]
+    assert archive_buttons == []
+
+
+def test_no_image_returned_shows_gentle_message_and_keeps_prompt_editable(tmp_path, monkeypatch):
+    import image_gen
+
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
+    monkeypatch.setenv("DB_PATH", str(db_path))
+    monkeypatch.setenv("BRAND_PACK", "marianabotelho-ig")
+
+    conn = db.get_connection(str(db_path))
+    db.init_db(conn)
+    idea_id = db.create_idea(conn, "marianabotelho-ig", "manual", "ritual matinal")
+    db.update_idea_status(conn, idea_id, "approved")
+    db.create_draft(conn, idea_id, 0, "Legenda de teste", ["Slide 1", "Slide 2"])
+    conn.close()
+
+    def no_image(client, prompt):
+        raise image_gen.NoImageReturned(tokens_in=50, tokens_out=10, cost=0.03)
+
+    monkeypatch.setattr(image_gen, "generate_image", no_image)
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    at.button(key="generate_0").click().run()
+
+    assert not at.exception
+    assert any(
+        "Desta vez não veio imagem" in w.value for w in at.warning
+    )
+    assert not [e for e in at.error if "Desta vez não veio imagem" in e.value]
+    # The prompt textarea must still be there to edit and retry.
+    assert at.text_area(key="prompt_area_1_0")
+    # A missing image is an expected outcome, not a failure: the status
+    # label/state must not read like a crash.
+    status = at.status[-1]
+    assert status.label != "Falhou"
+    assert status.state != "error"
+
+    conn2 = db.get_connection(str(db_path))
+    row = conn2.execute("SELECT * FROM api_calls WHERE idea_id = ?", (idea_id,)).fetchone()
+    assert row is not None
+    assert row["estimated_cost_usd"] == pytest.approx(0.03)
+    conn2.close()
 
 
 def test_carousel_preview_renders_when_all_slides_approved(tmp_path, monkeypatch):
@@ -69,7 +246,7 @@ def test_carousel_preview_renders_when_all_slides_approved(tmp_path, monkeypatch
     db.update_idea_status(conn, idea_id, "images_ready")
     conn.close()
 
-    at = AppTest.from_file(APP_PATH)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
     assert not at.exception

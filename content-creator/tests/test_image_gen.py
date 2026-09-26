@@ -52,6 +52,22 @@ def test_generate_image_calls_the_configured_model(monkeypatch):
     assert kwargs["input"] == "um prompt"
 
 
+def test_generate_image_raises_no_image_returned_when_gemini_gives_no_image():
+    fake_interaction = MagicMock()
+    fake_interaction.output_image = None
+    fake_interaction.usage.total_input_tokens = 50
+    fake_interaction.usage.total_output_tokens = 10
+    client = MagicMock()
+    client.interactions.create.return_value = fake_interaction
+
+    with pytest.raises(image_gen.NoImageReturned) as excinfo:
+        image_gen.generate_image(client, "um prompt qualquer")
+
+    assert excinfo.value.tokens_in == 50
+    assert excinfo.value.tokens_out == 10
+    assert excinfo.value.cost == pytest.approx(image_gen.calculate_cost(50, 10))
+
+
 def test_calculate_cost_matches_gemini_pricing():
     # Gemini 3.1 Flash Image standard pricing: $0.50/1M input, $60.00/1M output.
     assert image_gen.calculate_cost(1_000_000, 0) == pytest.approx(0.50)

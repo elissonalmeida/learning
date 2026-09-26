@@ -156,6 +156,24 @@ def test_raises_when_daily_cap_already_reached(conn, idea):
         )
 
 
+def test_daily_budget_error_message_is_gentle_pt_pt(conn, idea):
+    import tone_guard
+
+    db.log_api_call(conn, "generate_draft", tokens_in=1, tokens_out=1, estimated_cost_usd=2.0, idea_id=idea["id"])
+    fake_ai = make_fake_ai_module(critique_sequence=[[]])
+    with pytest.raises(pipeline.DailyBudgetExceededError) as excinfo:
+        pipeline.run_generation_pipeline(
+            client=None, conn=conn, idea=idea, tone="Educativo-Científico",
+            brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
+        )
+    message = str(excinfo.value)
+    assert tone_guard.find_harsh_words(message) == []
+    assert "$2.00" in message
+    assert "hoje" in message.lower()
+    assert "MAX_DAILY_SPEND_USD" in message
+    assert "This call" not in message
+
+
 def test_run_extraction_logs_the_call_and_returns_topics(conn):
     fake_ai = make_fake_ai_module(critique_sequence=[[]])
     topics = pipeline.run_extraction(

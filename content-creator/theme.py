@@ -1,3 +1,5 @@
+import html
+
 import streamlit as st
 
 HEADER_CSS = """
@@ -25,6 +27,6 @@ def inject_theme():
 
 def render_header(title):
     st.markdown(
-        f'<div class="app-header"><span class="app-header-title">{title}</span></div>',
+        f'<div class="app-header"><span class="app-header-title">{html.escape(title)}</span></div>',
         unsafe_allow_html=True,
     )

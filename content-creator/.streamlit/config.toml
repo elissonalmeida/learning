@@ -13,9 +13,11 @@ showWidgetBorder = true
 redColor = "#B85C5C"
 orangeColor = "#C4922A"
 greenColor = "#7A9E6F"
+greenTextColor = "#4F6B46"
 blueColor = "#185FA5"
 violetColor = "#534AB7"
 grayColor = "#8B6A4A"
+yellowColor = "#C4922A"
 
 [client]
 toolbarMode = "minimal"
