@@ -3,11 +3,13 @@ import json
 import re
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from html.parser import HTMLParser
 
 from sherlock.models import GatherResult, NeedsUpload, detect_platform, instagram_username, upload_instructions
@@ -16,6 +18,9 @@ MAX_CHARS = 20000
 MIN_CHARS = 200
 MAX_FETCH = 2_000_000  # max bytes read from a socket/response; also max chars of website html kept
 MAX_REDIRECTS = 5
+# Run yt-dlp as a module of this interpreter: the "yt-dlp" script is only on PATH
+# when the venv is activated.
+YTDLP_CMD = [sys.executable, "-m", "yt_dlp"]
 WEBSITE_FAIL_REASON = "Não consegui abrir esta página neste momento."
 WEBSITE_BLOCKED_REASON = "Este link não pode ser aberto a partir daqui."
 WEBSITE_BAD_CONTENT_TYPE_REASON = "Este link não leva a uma página de texto legível."
@@ -118,14 +123,27 @@ class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
 
 def _http_fetch(url, timeout=20, resolve=None):
     resolve = resolve or _resolve_all
-    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; ContentCreator/1.0)"})
+    request = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (compatible; ContentCreator/1.0)",
+        "Accept-Encoding": "identity",
+    })
     opener = urllib.request.build_opener(_SafeRedirectHandler(resolve))
     with opener.open(request, timeout=timeout) as response:
         content_type = (response.headers.get_content_type() or "").lower()
         if content_type and not content_type.startswith("text/"):
             raise _UnsupportedContentType(content_type)
         charset = response.headers.get_content_charset() or "utf-8"
-        return response.read(MAX_FETCH).decode(charset, errors="replace")
+        return _decode_body(response.read(MAX_FETCH), response.headers.get("Content-Encoding"), charset)
+
+
+def _decode_body(raw, content_encoding, charset):
+    """Some servers compress even when asked not to; urllib never decompresses."""
+    encoding = (content_encoding or "").strip().lower()
+    if encoding in ("gzip", "x-gzip"):
+        raw = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(raw, MAX_FETCH)
+    elif encoding == "deflate":
+        raw = zlib.decompressobj().decompress(raw, MAX_FETCH)
+    return raw[:MAX_FETCH].decode(charset, errors="replace")
 
 
 def gather_website(url, fetch=_http_fetch, resolve=None):
@@ -183,7 +201,7 @@ def gather_video(url, run=subprocess.run, transcribe=None):
         return NeedsUpload(original, VIDEO_BAD_SOURCE_REASON, upload_instructions(kind))
     try:
         proc = run(
-            ["yt-dlp", "--dump-single-json", "--skip-download", "--no-playlist", "--playlist-items", "1",
+            [*YTDLP_CMD, "--dump-single-json", "--skip-download", "--no-playlist", "--playlist-items", "1",
              "--", normalized],
             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=METADATA_TIMEOUT,
         )
@@ -241,7 +259,7 @@ def whisper_transcribe(url, run=subprocess.run):
     try:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             proc = run(
-                ["yt-dlp", "-x", "--audio-format", "mp3", "--no-playlist", "--playlist-items", "1",
+                [*YTDLP_CMD, "-x", "--audio-format", "mp3", "--no-playlist", "--playlist-items", "1",
                  "-o", f"{tmp}/audio.%(ext)s", "--", url],
                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=AUDIO_TIMEOUT,
             )

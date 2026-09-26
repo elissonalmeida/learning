@@ -360,3 +360,18 @@ def test_gather_video_drops_transcript_when_metadata_fills_the_limit(monkeypatch
     assert "Transcrição:" not in result.text
     assert len(result.text) <= 50
     assert result.text == gather._video_text(info)[:50]
+
+
+def test_gather_video_runs_ytdlp_through_the_current_python():
+    # "yt-dlp" is only on PATH when the venv is activated; running it as a module of
+    # the interpreter the app already uses works regardless.
+    import sys
+
+    seen = []
+
+    def run(cmd, **kwargs):
+        seen.append(cmd)
+        return SimpleNamespace(returncode=0, stdout=json.dumps({"title": "t" * 300}), stderr="")
+
+    gather.gather_video("https://youtu.be/x", run=run)
+    assert seen[0][:3] == [sys.executable, "-m", "yt_dlp"]

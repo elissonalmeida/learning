@@ -124,6 +124,7 @@ def test_http_fetch_reads_a_bounded_number_of_bytes(monkeypatch):
         headers = type("H", (), {
             "get_content_charset": lambda self: None,
             "get_content_type": lambda self: "text/html",
+            "get": lambda self, name, default=None: default,
         })()
 
         def read(self, n=-1):
@@ -372,3 +373,20 @@ def test_real_opener_with_safe_redirect_handler_refuses_redirect_to_a_private_ho
         opener.open(urllib.request.Request("http://exemplo.pt/"))
 
     assert fake_http.requests == ["http://exemplo.pt/"]
+
+
+def test_decode_body_decompresses_gzip_and_deflate():
+    import gzip
+    import zlib
+
+    html = "<p>Olá, mundo</p>".encode("utf-8")
+    assert gather._decode_body(gzip.compress(html), "gzip", "utf-8") == "<p>Olá, mundo</p>"
+    assert gather._decode_body(zlib.compress(html), "deflate", "utf-8") == "<p>Olá, mundo</p>"
+    assert gather._decode_body(html, None, "utf-8") == "<p>Olá, mundo</p>"
+
+
+def test_decode_body_caps_decompressed_size(monkeypatch):
+    import gzip
+
+    monkeypatch.setattr(gather, "MAX_FETCH", 100)
+    assert len(gather._decode_body(gzip.compress(b"a" * 10_000), "gzip", "utf-8")) == 100
