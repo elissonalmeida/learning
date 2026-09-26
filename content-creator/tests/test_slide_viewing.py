@@ -184,11 +184,11 @@ def test_switching_slide_updates_the_counter_and_the_dot(tmp_path, monkeypatch):
 
 
 def test_ver_legenda_completa_shows_the_whole_caption(tmp_path, monkeypatch):
-    _setup(tmp_path, monkeypatch)
+    idea_id = _setup(tmp_path, monkeypatch)
     at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
 
-    at.toggle(key="full_caption").set_value(True).run()
+    at.toggle(key=f"full_caption_{idea_id}").set_value(True).run()
 
     post = _post(at)
     assert "FIM-DA-LEGENDA" in post
@@ -224,3 +224,23 @@ def test_avatar_from_the_brand_pack_or_the_handle_initial():
     without = ig_preview.post_html("data:image/png;base64,AA", "@marca", None, 0, 2, "Olá")
     assert '<div class="ig-avatar">M</div>' in without
     assert '<span class="ig-mais">' not in without  # short caption is not cut
+
+
+def test_full_caption_toggle_is_per_idea(tmp_path, monkeypatch):
+    first = _setup(tmp_path, monkeypatch)
+    second = _setup(tmp_path, monkeypatch)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+    select = at.selectbox(key="img_idea_select")
+    label_a = [o for o in select.options if o.startswith(f"#{first} ")][0]
+    label_b = [o for o in select.options if o.startswith(f"#{second} ")][0]
+    select.set_value(label_a).run()
+    [t for t in at.toggle if t.label == "Ver legenda completa"][0].set_value(True).run()
+    assert "FIM-DA-LEGENDA" in _post(at)
+
+    at.selectbox(key="img_idea_select").set_value(label_b).run()
+
+    assert not at.exception
+    post = _post(at)
+    assert "FIM-DA-LEGENDA" not in post
+    assert '<span class="ig-mais">' in post

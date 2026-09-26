@@ -333,7 +333,7 @@ with tab_images:
                     palette.get("Handle", cfg.brand_pack),
                     data_uri(avatar_path) if avatar_path and avatar_path.is_file() else None,
                     idx, len(slides), latest_draft["caption"],
-                    full_caption=st.session_state.get("full_caption", False),
+                    full_caption=st.session_state.get(f"full_caption_{idea['id']}", False),
                 ))
                 col_prev, col_big, col_next = st.columns(3)
                 if col_prev.button("◀ Anterior", width="stretch") and idx > 0:
@@ -351,7 +351,7 @@ with tab_images:
                     if col.button(f"{j + 1}", key=f"thumb_{j}", type="primary" if j == idx else "secondary"):
                         st.session_state[preview_key] = j
                         st.rerun()
-                st.toggle("Ver legenda completa", key="full_caption")
+                st.toggle("Ver legenda completa", key=f"full_caption_{idea['id']}")
         else:
             st.info("Aprova todas as imagens para veres a pré-visualização do carrossel.")
 
