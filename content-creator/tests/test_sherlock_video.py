@@ -54,13 +54,32 @@ def test_gather_video_argv_has_separator_before_url_and_playlist_guards():
     assert seen["timeout"] == gather.METADATA_TIMEOUT
 
 
-def test_gather_video_rejects_source_without_http_scheme():
+def test_gather_video_rejects_a_non_http_scheme():
     def run(cmd, **kwargs):
-        raise AssertionError("yt-dlp must not be invoked for an unsafe source")
+        raise AssertionError("yt-dlp must not be invoked for a blocked scheme")
 
-    result = gather.gather_video("--exec=calc.exe", run=run)
+    result = gather.gather_video("file:///etc/passwd", run=run)
     assert isinstance(result, models.NeedsUpload)
     assert result.reason == gather.VIDEO_BAD_SOURCE_REASON
+
+
+def test_gather_video_accepts_scheme_less_links_by_normalizing_first():
+    seen = {}
+
+    def run(cmd, **kwargs):
+        seen["cmd"] = cmd
+        return SimpleNamespace(returncode=0, stdout=json.dumps({"title": "T"}), stderr="")
+
+    cases = [
+        ("youtu.be/x", "https://youtu.be/x"),
+        ("www.youtube.com/watch?v=x", "https://www.youtube.com/watch?v=x"),
+        ("tiktok.com/@a/video/1", "https://tiktok.com/@a/video/1"),
+    ]
+    for raw, normalized in cases:
+        result = gather.gather_video(raw, run=run)
+        assert isinstance(result, models.GatherResult), f"{raw!r} should be accepted"
+        assert seen["cmd"][-2:] == ["--", normalized]
+        assert result.source == raw
 
 
 def test_gather_video_returns_needs_upload_on_timeout():
@@ -86,6 +105,22 @@ def test_gather_video_returns_needs_upload_when_ytdlp_missing():
 
     result = gather.gather_video("https://youtu.be/x", run=run)
     assert isinstance(result, models.NeedsUpload)
+    assert "yt-dlp" not in result.reason.lower()
+
+
+def test_gather_video_reasons_never_mention_yt_dlp():
+    # yt-dlp is jargon in user-facing text (brief principle 3): every NeedsUpload
+    # reason gather_video can produce must stay tool-name-free.
+    scenarios = [
+        (lambda cmd, **kw: SimpleNamespace(returncode=1, stdout="", stderr="ERROR: x")),
+        (lambda cmd, **kw: (_ for _ in ()).throw(FileNotFoundError("yt-dlp"))),
+        (lambda cmd, **kw: SimpleNamespace(returncode=0, stdout="not json", stderr="")),
+        (lambda cmd, **kw: SimpleNamespace(returncode=0, stdout="[]", stderr="")),
+    ]
+    for run in scenarios:
+        result = gather.gather_video("https://youtu.be/x", run=run)
+        assert isinstance(result, models.NeedsUpload)
+        assert "yt-dlp" not in result.reason.lower()
 
 
 def test_whisper_transcribe_returns_none_when_whisper_not_installed(monkeypatch):
