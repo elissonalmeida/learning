@@ -322,3 +322,46 @@ def test_invoke_does_not_log_when_the_call_fails_without_usage_info(conn):
             brand_pack="marianabotelho-ig", daily_cap_usd=2.0, ai_module=fake_ai,
         )
     assert db.get_spend_today(conn) == 0
+
+
+def _fake_claude_response(text, tokens_in, tokens_out, stop_reason="end_turn"):
+    from unittest.mock import MagicMock
+
+    response = MagicMock()
+    response.content = [MagicMock(type="text", text=text)]
+    response.usage.input_tokens = tokens_in
+    response.usage.output_tokens = tokens_out
+    response.stop_reason = stop_reason
+    client = MagicMock()
+    client.messages.create.return_value = response
+    return client
+
+
+def test_invoke_logs_cost_exactly_once_for_a_truncated_response(conn):
+    """Uses the real ai module end-to-end: a truncated response reaches ai._call_claude,
+    which raises ai.ResponseTruncatedError carrying that already-billed call's usage."""
+    client = _fake_claude_response('{"caption": "legenda cort', tokens_in=400, tokens_out=16000, stop_reason="max_tokens")
+    assert db.get_spend_today(conn) == 0
+
+    with pytest.raises(ai.ResponseTruncatedError):
+        pipeline.run_extraction(
+            client=client, conn=conn, reference_text="texto qualquer",
+            brand_pack="marianabotelho-ig", daily_cap_usd=2.0,
+        )
+
+    assert db.get_spend_today(conn) == pytest.approx(ai.calculate_cost(400, 16000))
+
+
+def test_invoke_logs_cost_exactly_once_for_a_non_json_response(conn):
+    """Same, but the response is well-formed (not truncated) yet isn't valid JSON,
+    so ai.extract_topics's _parse_json_response_billed call raises instead."""
+    client = _fake_claude_response("isto não é json de todo", tokens_in=300, tokens_out=50)
+    assert db.get_spend_today(conn) == 0
+
+    with pytest.raises(ai.InvalidAIResponseError):
+        pipeline.run_extraction(
+            client=client, conn=conn, reference_text="texto qualquer",
+            brand_pack="marianabotelho-ig", daily_cap_usd=2.0,
+        )
+
+    assert db.get_spend_today(conn) == pytest.approx(ai.calculate_cost(300, 50))

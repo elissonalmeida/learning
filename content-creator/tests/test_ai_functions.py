@@ -98,6 +98,41 @@ def test_non_json_response_raises_invalid_ai_response_error():
     assert "Claro! Aqui está o teu carrossel" in str(excinfo.value)
 
 
+def test_truncated_response_carries_billed_usage_for_pipeline_to_log():
+    client = make_fake_client('{"caption": "legenda cort', stop_reason="max_tokens", tokens_in=400, tokens_out=16000)
+    with pytest.raises(ai.ResponseTruncatedError) as excinfo:
+        ai.generate_draft(
+            client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig"
+        )
+    assert excinfo.value.tokens_in == 400
+    assert excinfo.value.tokens_out == 16000
+    assert excinfo.value.cost == pytest.approx(ai.calculate_cost(400, 16000))
+
+
+def test_non_json_response_carries_billed_usage_for_pipeline_to_log():
+    client = make_fake_client("Claro! Aqui está o teu carrossel: ...", tokens_in=300, tokens_out=50)
+    with pytest.raises(ai.InvalidAIResponseError) as excinfo:
+        ai.generate_draft(
+            client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig"
+        )
+    assert excinfo.value.tokens_in == 300
+    assert excinfo.value.tokens_out == 50
+    assert excinfo.value.cost == pytest.approx(ai.calculate_cost(300, 50))
+
+
+def test_no_text_block_error_carries_billed_usage_for_pipeline_to_log():
+    client = make_fake_client("irrelevant", tokens_in=200, tokens_out=10)
+    client.messages.create.return_value.content = [MagicMock(type="thinking")]
+    del client.messages.create.return_value.content[0].text
+    with pytest.raises(ai.InvalidAIResponseError) as excinfo:
+        ai.generate_draft(
+            client, "ashwagandha", "Educativo-Científico", "Educativo Integrativo", "marianabotelho-ig"
+        )
+    assert excinfo.value.tokens_in == 200
+    assert excinfo.value.tokens_out == 10
+    assert excinfo.value.cost > 0
+
+
 def test_parse_json_response_strips_a_markdown_code_fence():
     """The prompts say 'JSON only, no extra text' but models sometimes wrap the
     response in a ```json ... ``` fence anyway -- confirmed live against the real

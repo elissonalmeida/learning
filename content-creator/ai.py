@@ -23,20 +23,24 @@ class ReferenceTooLongError(Exception):
     pass
 
 
-class ResponseTruncatedError(Exception):
-    pass
-
-
-class InvalidAIResponseError(Exception):
-    """Optionally carries the token usage/cost of the AI call that produced the
-    invalid response, so a caller like pipeline._invoke can still log the spend
-    before re-raising (the call was paid for even though its answer was rejected)."""
+class _BilledError(Exception):
+    """Base for errors raised after the API call already happened (and was billed).
+    Optionally carries that call's token usage/cost, so a caller like
+    pipeline._invoke can still log the spend before re-raising."""
 
     def __init__(self, message, tokens_in=0, tokens_out=0, cost=0.0):
         super().__init__(message)
         self.tokens_in = tokens_in
         self.tokens_out = tokens_out
         self.cost = cost
+
+
+class ResponseTruncatedError(_BilledError):
+    pass
+
+
+class InvalidAIResponseError(_BilledError):
+    pass
 
 
 _JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL)
@@ -59,6 +63,17 @@ def _parse_json_response(text):
             "A resposta da API não era JSON válido. "
             f"Erro: {e}. Início da resposta: {snippet!r}"
         ) from e
+
+
+def _parse_json_response_billed(text, tokens_in, tokens_out):
+    """Like _parse_json_response, but attaches the already-billed call's usage to
+    the error if the response isn't valid JSON, so pipeline._invoke can still log
+    that spend before re-raising."""
+    try:
+        return _parse_json_response(text)
+    except InvalidAIResponseError as e:
+        e.tokens_in, e.tokens_out, e.cost = tokens_in, tokens_out, calculate_cost(tokens_in, tokens_out)
+        raise
 
 
 def validate_reference_length(reference_text):
@@ -131,20 +146,27 @@ def _call_claude(client, prompt_text, max_tokens=MAX_TOKENS):
         output_config={"effort": "low"},
         messages=[{"role": "user", "content": prompt_text}],
     )
+    # The API call above already happened (and was billed) by this point, so any
+    # error raised from here on must carry its usage for pipeline._invoke to log.
+    tokens_in = response.usage.input_tokens
+    tokens_out = response.usage.output_tokens
+    cost = calculate_cost(tokens_in, tokens_out)
     if getattr(response, "stop_reason", None) == "max_tokens":
         raise ResponseTruncatedError(
             f"A resposta foi cortada ao atingir o limite de {max_tokens} tokens de saída. "
-            "Reduz o tamanho do pedido ou aumenta MAX_TOKENS em ai.py."
+            "Reduz o tamanho do pedido ou aumenta MAX_TOKENS em ai.py.",
+            tokens_in=tokens_in, tokens_out=tokens_out, cost=cost,
         )
     text_block = next((block for block in response.content if getattr(block, "type", None) == "text"), None)
     if text_block is None:
         raise InvalidAIResponseError(
             "A resposta da Claude não contém nenhum bloco de texto (pode conter apenas "
             "raciocínio interno). Blocos recebidos: "
-            + ", ".join(getattr(b, "type", "desconhecido") for b in response.content)
+            + ", ".join(getattr(b, "type", "desconhecido") for b in response.content),
+            tokens_in=tokens_in, tokens_out=tokens_out, cost=cost,
         )
     text = text_block.text
-    return text, response.usage.input_tokens, response.usage.output_tokens
+    return text, tokens_in, tokens_out
 
 
 def extract_topics(client, reference_text, brand_pack):
@@ -155,7 +177,7 @@ def extract_topics(client, reference_text, brand_pack):
     )
     prompt = f"{prompt}\n\n## Texto de Referência\n{reference_text}"
     text, tokens_in, tokens_out = _call_claude(client, prompt)
-    topics = _parse_json_response(text)
+    topics = _parse_json_response_billed(text, tokens_in, tokens_out)
     return topics, tokens_in, tokens_out, calculate_cost(tokens_in, tokens_out)
 
 
@@ -167,7 +189,7 @@ def generate_draft(client, topic, tone, pillar, brand_pack):
     )
     prompt = f"{prompt}\n\n## Tópico\n{topic}\n\n## Pilar\n{pillar}\n\n## Tom Escolhido\n{tone}"
     text, tokens_in, tokens_out = _call_claude(client, prompt)
-    draft = _parse_json_response(text)
+    draft = _parse_json_response_billed(text, tokens_in, tokens_out)
     return draft, tokens_in, tokens_out, calculate_cost(tokens_in, tokens_out)
 
 
@@ -179,7 +201,7 @@ def critique_draft(client, draft, brand_pack):
         anti_patterns=load_brand_doc(brand_pack, "anti-patterns.md"),
     )
     text, tokens_in, tokens_out = _call_claude(client, prompt)
-    flags = _parse_json_response(text)
+    flags = _parse_json_response_billed(text, tokens_in, tokens_out)
     return flags, tokens_in, tokens_out, calculate_cost(tokens_in, tokens_out)
 
 
@@ -190,5 +212,5 @@ def revise_draft(client, draft, flags, brand_pack):
         quality_flags=json.dumps(flags, ensure_ascii=False),
     )
     text, tokens_in, tokens_out = _call_claude(client, prompt)
-    revised = _parse_json_response(text)
+    revised = _parse_json_response_billed(text, tokens_in, tokens_out)
     return revised, tokens_in, tokens_out, calculate_cost(tokens_in, tokens_out)
