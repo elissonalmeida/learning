@@ -294,3 +294,31 @@ def test_http_fetch_refuses_a_redirect_to_a_blocked_host_end_to_end(monkeypatch)
 
 def test_redirect_handler_caps_the_number_of_hops():
     assert gather._SafeRedirectHandler.max_redirections == gather.MAX_REDIRECTS
+
+
+def test_is_blocked_ip_blocks_carrier_grade_nat_and_allows_a_real_public_ip():
+    import ipaddress
+
+    # 100.64.0.0/10 (RFC 6598 shared/CGNAT address space) isn't loopback, private
+    # (in the classic RFC1918 sense) or link-local, but it also isn't globally
+    # routable -- the old is_private-based check let it through.
+    assert gather._is_blocked_ip(ipaddress.ip_address("100.64.0.1")) is True
+    assert gather._is_blocked_ip(ipaddress.ip_address("8.8.8.8")) is False
+
+
+def test_gather_website_rejects_carrier_grade_nat_address():
+    def fetch_should_not_run(url):
+        raise AssertionError("fetch must not run for a CGNAT address")
+
+    result = gather.gather_website(
+        "http://cgnat.exemplo.pt", fetch=fetch_should_not_run, resolve=lambda host: ["100.64.0.1"]
+    )
+    assert isinstance(result, models.NeedsUpload)
+    assert result.reason == gather.WEBSITE_BLOCKED_REASON
+
+
+def test_gather_website_allows_a_real_public_ip():
+    result = gather.gather_website(
+        "https://exemplo.pt", fetch=lambda url: _long_html(), resolve=lambda host: ["8.8.8.8"]
+    )
+    assert isinstance(result, models.GatherResult)

@@ -57,13 +57,24 @@ def _resolve_all(host):
 
 
 def _is_blocked_ip(ip):
-    return (
-        ip.is_private or ip.is_loopback or ip.is_link_local
-        or ip.is_reserved or ip.is_multicast or ip.is_unspecified
-    )
+    # Block everything that isn't globally routable (this already covers private,
+    # loopback, link-local and a good deal more, e.g. carrier-grade NAT's
+    # 100.64.0.0/10) plus multicast/unspecified/reserved explicitly, since
+    # is_global's exact definition has shifted slightly across Python versions.
+    # An IPv4-mapped IPv6 address (::ffff:10.0.0.1) is checked as its IPv4 form so
+    # it can't be used to sneak a private IPv4 address past the guard.
+    mapped = getattr(ip, "ipv4_mapped", None)
+    if mapped is not None:
+        ip = mapped
+    return not ip.is_global or ip.is_multicast or ip.is_unspecified or ip.is_reserved
 
 
 def _is_blocked_host(hostname, resolve):
+    # Residual accepted risk: this is a point-in-time check. Nothing stops the
+    # DNS answer from changing between this check and the connection urlopen
+    # makes moments later (DNS rebinding / TOCTOU). Out of scope for a
+    # single-user local app; a real multi-user deployment would need to pin the
+    # resolved address and connect to it directly.
     if not hostname:
         return True
     host = hostname.lower().rstrip(".")
