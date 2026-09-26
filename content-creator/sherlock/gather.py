@@ -4,6 +4,7 @@ import re
 import socket
 import subprocess
 import tempfile
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -202,10 +203,15 @@ def gather_video(url, run=subprocess.run, transcribe=None):
     return GatherResult(original, method, text[:MAX_CHARS])
 
 
+TRANSCRIBE_TIMEOUT = 600
+
+
 def whisper_transcribe(url, run=subprocess.run):
     """Best-effort transcript via yt-dlp audio download + openai-whisper. Returns None if
     whisper or ffmpeg are unavailable or anything fails: the transcript is a bonus.
-    Note: whisper.load_model("base") downloads about 140 MB the first time it's used."""
+    Note: the first call loads the "base" Whisper model, which downloads about 140 MB
+    from the network; TRANSCRIBE_TIMEOUT bounds that download plus the transcription
+    itself, since both run in the worker thread below."""
     try:
         import whisper  # noqa: WPS433 (optional heavy dependency, imported lazily)
     except ImportError:
@@ -219,8 +225,19 @@ def whisper_transcribe(url, run=subprocess.run):
             )
             if proc.returncode != 0:
                 return None
-            model = whisper.load_model("base")
-            return model.transcribe(f"{tmp}/audio.mp3").get("text", "").strip() or None
+
+            outcome = {}
+
+            def _run_model():
+                model = whisper.load_model("base")
+                outcome["text"] = model.transcribe(f"{tmp}/audio.mp3").get("text", "").strip() or None
+
+            worker = threading.Thread(target=_run_model, daemon=True)
+            worker.start()
+            worker.join(TRANSCRIBE_TIMEOUT)
+            if worker.is_alive():  # still running: give up, don't wait for it any longer
+                return None
+            return outcome.get("text")
     except Exception:
         return None
 

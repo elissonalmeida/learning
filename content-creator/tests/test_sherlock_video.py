@@ -219,6 +219,25 @@ def test_whisper_transcribe_returns_none_on_timeout(monkeypatch):
     assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
 
 
+def test_whisper_transcribe_returns_none_when_transcription_times_out(monkeypatch):
+    import sys
+    import time
+
+    monkeypatch.setattr(gather, "TRANSCRIBE_TIMEOUT", 0.05)
+
+    class SlowModel:
+        def transcribe(self, path):
+            time.sleep(1)
+            return {"text": "nunca chega"}
+
+    monkeypatch.setitem(sys.modules, "whisper", SimpleNamespace(load_model=lambda name: SlowModel()))
+
+    def run(cmd, **kwargs):
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    assert gather.whisper_transcribe("https://youtu.be/x", run=run) is None
+
+
 def test_whisper_transcribe_survives_tempdir_cleanup_errors(monkeypatch):
     import sys
 
