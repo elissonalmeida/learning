@@ -52,8 +52,8 @@ project) for history.
 - **Keep the main folder (`Documents/learning`) on `main`.** The user runs the app from it
   (`content-creator/run.bat`); never check out other branches in it. Use worktrees. Check
   `ListAgents` for other Claude sessions before touching shared state.
-- Note: strategy-coach and look-and-feel were merged **without** their final whole-branch
-  reviews. Do a whole-`main` review before shipping a coach or theme change to users.
+- The strategy-coach and look-and-feel final whole-branch reviews were done after the merge
+  (`content-creator/docs/reviews/2026-09-26-final-review-*.md`) and their findings fixed.
 - Claim tickets with `pick_ticket.py` (it only lists unblocked ones; never
   claim a `status:blocked` ticket by number). One ticket per thread.
 - Ticket dependencies (`Depends on: #N`) still gate order; the old cross-plan
