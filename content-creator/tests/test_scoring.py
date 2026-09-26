@@ -59,6 +59,8 @@ def test_score_goals_prompt_carries_tone_rule_and_evidence():
     [{"goal": "build_authority", "score": True, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}],
     [{"goal": "build_authority", "score": False, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}],
     [{"goal": "build_authority", "score": 5, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}] * 2,
+    [{"goal": "build_authority", "score": 5, "target": "t", "reasons": ["r"], "evidence": "reasoned"}],
+    [{"goal": "build_authority", "score": 5, "metric": "m", "reasons": ["r"], "evidence": "reasoned"}],
     {"not": "a list"},
 ])
 def test_validate_rejects_malformed_items(bad):
@@ -88,3 +90,29 @@ def test_validate_rejects_a_missing_chosen_goal():
     items = [{"goal": "build_authority", "score": 5, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"}]
     with pytest.raises(ai.InvalidAIResponseError):
         scoring.validate_scored_goals(items, ["build_authority", "get_conversations"])
+
+
+def test_score_goals_rejects_empty_goal_list_without_calling_the_client():
+    client = fake_client([])
+    with pytest.raises(ValueError):
+        scoring.score_goals(client, {**PROFILE, "goals": []}, EVIDENCE)
+    client.messages.create.assert_not_called()
+
+
+def test_score_goals_rejects_unknown_goal_key_without_calling_the_client():
+    client = fake_client([])
+    with pytest.raises(ValueError):
+        scoring.score_goals(client, {**PROFILE, "goals": ["invented_goal"]}, EVIDENCE)
+    client.messages.create.assert_not_called()
+
+
+def test_score_goals_prompt_includes_the_chosen_goals_menu_lines():
+    payload = [
+        {"goal": "build_authority", "score": 1, "metric": "m", "target": "t", "reasons": ["r"], "evidence": "reasoned"},
+        {"goal": "get_conversations", "score": 2, "metric": "m2", "target": "t2", "reasons": ["r"], "evidence": "reasoned"},
+    ]
+    client = fake_client(payload)
+    scoring.score_goals(client, PROFILE, EVIDENCE)
+    prompt = client.messages.create.call_args.kwargs["messages"][0]["content"]
+    for key in PROFILE["goals"]:
+        assert scoring.GOAL_MENU[key]["label"] in prompt

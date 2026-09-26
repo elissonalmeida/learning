@@ -43,6 +43,11 @@ def validate_scored_goals(items, allowed_goals):
 
 
 def score_goals(client, profile, evidence):
+    if not profile["goals"]:
+        raise ValueError("Escolhe pelo menos um objectivo antes de continuar.")
+    unknown = [key for key in profile["goals"] if key not in GOAL_MENU]
+    if unknown:
+        raise ValueError(f"Objectivo desconhecido: {unknown[0]!r}.")
     prompt = ai.render_prompt(ai.load_prompt("score_goals"), tone_rule=GENTLE_TONE_RULE)
     goal_lines = "\n".join(
         f"- {key}: {GOAL_MENU[key]['label']} (métrica base: {GOAL_MENU[key]['metric']})"
