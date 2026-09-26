@@ -55,6 +55,13 @@ def run_with_progress(fn, *args, **kwargs):
 
         try:
             result = fn(*args, on_step=on_step, **kwargs)
+        except image_gen.NoImageReturned as e:
+            # An expected outcome (Gemini simply didn't return an image this
+            # time), not a crash — keep the status gentle instead of "Falhou".
+            status.update(label="Sem imagem desta vez", state="complete")
+            with st.expander("Detalhes (para diagnóstico)", expanded=False):
+                st.code(f"{type(e).__name__}: {e}")
+            raise
         except Exception as e:
             status.update(label="Falhou", state="error")
             with st.expander("Detalhes do erro (para diagnóstico)", expanded=True):
@@ -226,7 +233,7 @@ with tab_images:
                     except pipeline.DailyBudgetExceededError as e:
                         st.error(str(e))
                     except image_gen.NoImageReturned:
-                        st.error(
+                        st.warning(
                             "Desta vez não veio imagem. Tenta gerar outra vez, "
                             "ou ajusta um pouco o prompt."
                         )

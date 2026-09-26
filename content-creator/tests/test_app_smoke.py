@@ -205,10 +205,16 @@ def test_no_image_returned_shows_gentle_message_and_keeps_prompt_editable(tmp_pa
 
     assert not at.exception
     assert any(
-        "Desta vez não veio imagem" in e.value for e in at.error
+        "Desta vez não veio imagem" in w.value for w in at.warning
     )
+    assert not [e for e in at.error if "Desta vez não veio imagem" in e.value]
     # The prompt textarea must still be there to edit and retry.
     assert at.text_area(key="prompt_area_1_0")
+    # A missing image is an expected outcome, not a failure: the status
+    # label/state must not read like a crash.
+    status = at.status[-1]
+    assert status.label != "Falhou"
+    assert status.state != "error"
 
     conn2 = db.get_connection(str(db_path))
     row = conn2.execute("SELECT * FROM api_calls WHERE idea_id = ?", (idea_id,)).fetchone()
