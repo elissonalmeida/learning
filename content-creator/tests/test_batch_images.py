@@ -122,11 +122,25 @@ def test_per_slide_recriar_still_opens_the_editable_prompt(tmp_path, monkeypatch
     _, idea_id = _setup(tmp_path, monkeypatch, with_images=[0, 1, 2])
     at = _app()
 
-    at.button(key="regen_1").click().run()
+    [b for b in at.button if b.label == "Recriar" and b.key == "regen_1"][0].click().run()
 
     assert not at.exception
     assert at.text_area(key=f"prompt_area_{idea_id}_1")
     assert at.button(key="generate_1")
+
+
+def test_recriar_todas_prefers_an_edited_prompt_over_the_saved_one(tmp_path, monkeypatch):
+    db_path, idea_id = _setup(tmp_path, monkeypatch, with_images=[0, 1, 2])
+    sent = _fake_gemini(monkeypatch)
+    at = _app()
+    at.button(key="regen_1").click().run()
+    at.text_area(key=f"prompt_area_{idea_id}_1").set_value("prompt novo do slide 2").run()
+
+    at.button(key="recreate_all").click().run()
+    at.button(key="recreate_all_yes").click().run()
+
+    assert not at.exception
+    assert sent == ["prompt guardado 0", "prompt novo do slide 2", "prompt guardado 2"]
 
 
 def test_gerar_todas_makes_only_the_missing_slides(tmp_path, monkeypatch):
