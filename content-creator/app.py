@@ -122,6 +122,68 @@ def enlarged_slide_dialog(paths, total):
     )
 
 
+def slide_label_list(indices):
+    return ", ".join(f"Slide {i + 1}" for i in indices)
+
+
+def slide_prompt(idea_id, slide_index, slide_text, role, existing):
+    """The prompt a batch uses for one slide (#48): the user's edit in the
+    prompt box if there is one, else the prompt that made the current image
+    (so earlier edits are kept), else a fresh one."""
+    fresh = image_gen.build_image_prompt(slide_text, cfg.brand_pack, role)
+    edited = st.session_state.get(f"prompt_{idea_id}_{slide_index}")
+    if edited and edited != fresh:
+        return edited
+    if existing and existing["prompt"]:
+        return existing["prompt"]
+    return fresh
+
+
+def batch_cost_note(count, spend_today):
+    """Upper-bound cost of a batch, and a gentle heads-up when today's
+    remaining budget may not cover all of it."""
+    noun = "imagem" if count == 1 else "imagens"
+    note = f"{count} {noun} — até cerca de ${count * pipeline.ESTIMATED_MAX_CALL_COST_USD:.2f}."
+    room = max(int((cfg.max_daily_spend_usd - spend_today) / pipeline.ESTIMATED_MAX_CALL_COST_USD + 1e-9), 0)
+    if room == 0:
+        note += (
+            " Por hoje o orçamento que definiste já não deve chegar para mais imagens — "
+            "podes tentar na mesma, ou continuar amanhã com calma."
+        )
+    elif room < count:
+        note += (
+            f" O orçamento que resta hoje deve chegar para cerca de {room} — podes começar na mesma; "
+            "se chegarmos ao limite, paramos com calma e o resto fica para amanhã."
+        )
+    return note
+
+
+def run_image_batch(idea, slide_indices, slides, existing_images):
+    """Generates the given slides one after another with a progress bar, keeps
+    the outcome for the summary shown after the rerun (#48)."""
+    jobs = []
+    for i in slide_indices:
+        role = "hero" if i == 0 else "card"
+        prompt = slide_prompt(idea["id"], i, slides[i], role, existing_images.get(i))
+        jobs.append((i, role, slides[i], prompt, i == len(slides) - 1))
+    with st.status("A gerar as imagens...", expanded=True) as status:
+        bar = st.progress(0.0)
+
+        def on_progress(position, total, slide_index):
+            bar.progress(position / total, text=f"A gerar imagem {position + 1} de {total}")
+
+        result = pipeline.generate_slide_images(
+            gemini_client, conn, idea, jobs, images_root, cfg.max_daily_spend_usd, on_progress=on_progress,
+        )
+        bar.progress(1.0, text="Feito")
+        status.update(label="Concluído", state="complete")
+    for i in result["done"]:
+        st.session_state[f"show_prompt_{idea['id']}_{i}"] = False
+    st.session_state[f"batch_result_{idea['id']}"] = result
+    st.toast(f"{len(result['done'])} de {len(jobs)} imagens prontas.")
+    st.rerun()
+
+
 def render_reviewed_draft(conn, idea):
     """Shows the latest draft of a "reviewed" idea with Aprovar/Rejeitar,
     loaded straight from the DB so it survives a reload."""
@@ -247,6 +309,55 @@ with tab_images:
         slides = latest_draft["slides"]
         existing_images = {img["slide_index"]: img for img in db.get_latest_slide_images(conn, idea["id"])}
 
+        batch = None
+        missing = [i for i in range(len(slides)) if i not in existing_images]
+        spend_today = db.get_spend_today(conn)
+        confirm_key = f"confirm_recreate_all_{idea['id']}"
+        col_all, col_redo = st.columns(2)
+        if missing:
+            if col_all.button("Gerar todas as imagens", key="generate_all", type="primary"):
+                batch = missing
+            col_all.caption("Só os slides ainda sem imagem: " + batch_cost_note(len(missing), spend_today))
+        if existing_images and col_redo.button("Recriar todas", key="recreate_all"):
+            st.session_state[confirm_key] = True
+        if st.session_state.get(confirm_key):
+            st.warning(
+                f"Vamos criar imagens novas para os {len(slides)} slides, também para os que já aprovaste — "
+                "as novas ficam à espera da tua aprovação. " + batch_cost_note(len(slides), spend_today)
+            )
+            col_yes, col_cancel = st.columns(2)
+            if col_yes.button("Sim, recriar todas", key="recreate_all_yes", type="primary"):
+                st.session_state.pop(confirm_key)
+                batch = list(range(len(slides)))
+            if col_cancel.button("Cancelar", key="recreate_all_cancel"):
+                st.session_state.pop(confirm_key)
+                st.rerun()
+
+        outcome = st.session_state.get(f"batch_result_{idea['id']}")
+        if outcome:
+            done = len(outcome["done"])
+            if done:
+                st.success(
+                    (f"{done} imagem nova pronta" if done == 1 else f"{done} imagens novas prontas")
+                    + " — revê e aprova quando te apetecer."
+                )
+            if outcome["budget_message"]:
+                st.info(
+                    outcome["budget_message"]
+                    + f" Ficaram para depois: {slide_label_list(outcome['not_attempted'])}."
+                )
+            if outcome["failed"]:
+                st.info(
+                    f"Desta vez não vieram imagens para: {slide_label_list(outcome['failed'])}. "
+                    "Podes tentar de novo só estas."
+                )
+                if st.button("Tentar de novo só estas", key="retry_failed"):
+                    batch = outcome["failed"]
+                with st.expander("Detalhes (para diagnóstico)", expanded=False):
+                    st.code("\n".join(f"Slide {i + 1}: {e}" for i, e in outcome["errors"].items()))
+        if batch:
+            run_image_batch(idea, batch, slides, existing_images)
+
         for i, slide_text in enumerate(slides):
             role = "hero" if i == 0 else "card"
             st.markdown(f"**Slide {i + 1}** ({'capa' if role == 'hero' else 'cartão'})")
@@ -270,7 +381,7 @@ with tab_images:
                     pipeline.approve_slide_image(conn, existing["id"])
                     pipeline.maybe_mark_images_ready(conn, idea["id"], len(slides))
                     st.rerun()
-                if col2.button("Gerar novamente", key=f"regen_{i}"):
+                if col2.button("Recriar", key=f"regen_{i}"):
                     st.session_state[f"show_prompt_{idea['id']}_{i}"] = True
                 has_background = bool(idea["image_folder"]) and pipeline.background_path(
                     images_root, idea["image_folder"], i,
