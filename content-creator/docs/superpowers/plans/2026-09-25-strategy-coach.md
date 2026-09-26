@@ -1943,6 +1943,7 @@ import streamlit as st
 
 import coach
 import coach_store
+import pipeline
 import scoring
 from sherlock import run as sherlock_run
 
@@ -2044,7 +2045,7 @@ def _render_questions(cfg, conn, client, run_with_progress):
                 st.session_state["coach_needs_upload"] = needs
             coach.draft_strategy(client, conn, strategy_id, cfg.brand_pack, cfg.max_daily_spend_usd)
         except Exception as e:  # budget cap and API problems: a calm message, details stay in the progress box
-            st.info(COPY["budget"] if "daily cap" in str(e) else "Algo não correu como esperado, podemos tentar de novo quando quiseres.")
+            st.info(COPY["budget"] if isinstance(e, pipeline.DailyBudgetExceededError) else "Algo não correu como esperado, podemos tentar de novo quando quiseres.")
             return
         st.session_state["coach_strategy_id"] = strategy_id
         st.rerun()
