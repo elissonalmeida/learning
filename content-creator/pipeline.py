@@ -165,6 +165,36 @@ def generate_slide_image(
     return db.get_slide_image(conn, slide_image_id)
 
 
+def generate_slide_images(
+    gemini_client, conn, idea, jobs, images_root, daily_cap_usd, image_gen_module=image_gen,
+    render_module=render, storage_module=storage, on_progress=None,
+):
+    """Makes several slide images in one go (#48). jobs is a list of
+    (slide_index, role, slide_text, prompt, is_last). A slide that fails is
+    noted and the rest carry on; reaching the daily cap stops the batch and
+    the slides left are reported as not attempted."""
+    result = {"done": [], "failed": [], "errors": {}, "not_attempted": [], "budget_message": None}
+    for position, (slide_index, role, slide_text, prompt, is_last) in enumerate(jobs):
+        if on_progress:
+            on_progress(position, len(jobs), slide_index)
+        try:
+            generate_slide_image(
+                gemini_client, conn, idea, slide_index, role, slide_text, prompt, images_root,
+                daily_cap_usd, image_gen_module=image_gen_module, render_module=render_module,
+                storage_module=storage_module, is_last=is_last,
+            )
+        except DailyBudgetExceededError as e:
+            result["budget_message"] = str(e)
+            result["not_attempted"] = [job[0] for job in jobs[position:]]
+            break
+        except Exception as e:
+            result["failed"].append(slide_index)
+            result["errors"][slide_index] = f"{type(e).__name__}: {e}"
+        else:
+            result["done"].append(slide_index)
+    return result
+
+
 def background_path(images_root, folder, slide_index):
     """Where a slide's raw image lives: a _raw subfolder, kept apart from the
     publishable slides."""
@@ -203,7 +233,7 @@ def rerender_slide_image(
     render_module=render, on_step=None,
 ):
     """Redo a slide's layout from its saved raw image — no API call, no cost.
-    Adds a new pending slide_images row, like "Gerar novamente" does."""
+    Adds a new pending slide_images row, like "Recriar" does."""
     folder = idea.get("image_folder")
     background = background_path(images_root, folder, slide_index) if folder else None
     if background is None or not background.is_file():

@@ -314,3 +314,84 @@ def test_rerender_slide_image_records_text_overflow(conn, idea, tmp_path):
         render_module=make_fake_render(overflow=True),
     )
     assert row["text_overflow"] == 1
+
+
+# ---- #48: generate several slide images in one go --------------------------
+
+def _jobs(indices, total=4):
+    return [(i, "hero" if i == 0 else "card", f"texto {i}", f"prompt {i}", i == total - 1) for i in indices]
+
+
+def make_scripted_image_gen(outcomes, prompts=None):
+    """outcomes maps prompt -> exception to raise; any other prompt succeeds."""
+    def generate_image(client, prompt):
+        if prompts is not None:
+            prompts.append(prompt)
+        outcome = outcomes.get(prompt)
+        if outcome is not None:
+            raise outcome
+        return b"fake-image-bytes", 50, 1120, 0.07
+    return SimpleNamespace(generate_image=generate_image)
+
+
+def test_generate_slide_images_makes_every_slide_and_reports_progress(conn, idea, tmp_path):
+    calls, progress = [], []
+    result = pipeline.generate_slide_images(
+        None, conn, idea, _jobs([0, 1, 2, 3]), tmp_path, 2.0,
+        image_gen_module=make_fake_image_gen(), render_module=make_fake_render(calls),
+        on_progress=lambda position, total, slide_index: progress.append((position, total, slide_index)),
+    )
+    assert result == {"done": [0, 1, 2, 3], "failed": [], "errors": {}, "not_attempted": [], "budget_message": None}
+    assert progress == [(0, 4, 0), (1, 4, 1), (2, 4, 2), (3, 4, 3)]
+    assert [c["is_last"] for c in calls] == [False, False, False, True]
+    assert [c["role"] for c in calls] == ["hero", "card", "card", "card"]
+    latest = db.get_latest_slide_images(conn, idea["id"])
+    assert [(r["slide_index"], r["prompt"]) for r in latest] == [(i, f"prompt {i}") for i in range(4)]
+    # All slides land in one carousel folder.
+    assert len({Path(r["file_path"]).parent for r in latest}) == 1
+
+
+def test_generate_slide_images_keeps_going_when_one_slide_gets_no_image(conn, idea, tmp_path):
+    fake = make_scripted_image_gen({"prompt 1": image_gen.NoImageReturned(tokens_in=5, tokens_out=1, cost=0.03)})
+    result = pipeline.generate_slide_images(
+        None, conn, idea, _jobs([0, 1, 2]), tmp_path, 2.0,
+        image_gen_module=fake, render_module=make_fake_render(),
+    )
+    assert result["done"] == [0, 2]
+    assert result["failed"] == [1]
+    assert result["not_attempted"] == []
+    assert result["budget_message"] is None
+    assert [r["slide_index"] for r in db.get_latest_slide_images(conn, idea["id"])] == [0, 2]
+    costs = [r["estimated_cost_usd"] for r in conn.execute("SELECT * FROM api_calls ORDER BY id")]
+    assert costs == pytest.approx([0.07, 0.03, 0.07])
+
+
+def test_generate_slide_images_keeps_going_after_an_unexpected_error(conn, idea, tmp_path):
+    fake = make_scripted_image_gen({"prompt 0": RuntimeError("ligação caiu")})
+    result = pipeline.generate_slide_images(
+        None, conn, idea, _jobs([0, 1]), tmp_path, 2.0,
+        image_gen_module=fake, render_module=make_fake_render(),
+    )
+    assert result["done"] == [1]
+    assert result["failed"] == [0]
+    assert result["errors"] == {0: "RuntimeError: ligação caiu"}
+
+
+def test_generate_slide_images_stops_gently_when_the_daily_cap_is_reached(conn, idea, tmp_path):
+    import tone_guard
+
+    # 2.0 cap, 1.75 already spent: room for one call at the 0.20 estimate
+    # (1.75 + 0.20 <= 2.0); it costs 0.07, then 1.82 + 0.20 > 2.0 stops the rest.
+    db.log_api_call(conn, "generate_draft", tokens_in=1, tokens_out=1, estimated_cost_usd=1.75, idea_id=idea["id"])
+    prompts = []
+    result = pipeline.generate_slide_images(
+        None, conn, idea, _jobs([1, 2, 3]), tmp_path, 2.0,
+        image_gen_module=make_scripted_image_gen({}, prompts), render_module=make_fake_render(),
+    )
+    assert result["done"] == [1]
+    assert result["failed"] == []
+    assert result["not_attempted"] == [2, 3]
+    assert "$2.00" in result["budget_message"]
+    assert tone_guard.find_harsh_words(result["budget_message"]) == []
+    assert prompts == ["prompt 1"]  # nothing is sent once the cap would be passed
+    assert db.get_spend_today(conn) == pytest.approx(1.82)  # the attempted image is logged
