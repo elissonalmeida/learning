@@ -12,11 +12,19 @@ de imagem) e por `render.py` (para os templates HTML/CSS).
 - **Acento dourado:** `#e6b55c`
 - **Rosa claro:** `#ebb5a2`
 - **Bege claro:** `#e7d1a8`
+- **Moldura escura:** `#2f4d30` (moldura exterior dos cartões, amostrada do cartão publicado)
+- **Texto escuro:** `#14290f` (texto dos cartões sobre o pergaminho, amostrado do cartão publicado)
+
+## Identidade
+
+- **Handle:** `@marianabotelho.pt` (aparece em baixo, ao centro, na capa)
 
 ## Tipografia
 
 - Títulos/destaque: **Cormorant Garamond** (serifada, elegante)
-- Corpo de texto: **DM Sans** (sem serifa, legível em ecrã pequeno)
+- Corpo de texto nos cartões dos slides: **Lora** (serifada, grande e centrada,
+  como no cartão publicado)
+- Texto da interface da app: **DM Sans** (sem serifa)
 
 ## Motivo botânico e moldura
 

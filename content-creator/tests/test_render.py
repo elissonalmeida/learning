@@ -1,12 +1,42 @@
 import base64
+import io
+from pathlib import Path
+
 import pytest
+from PIL import Image
+
 import render
+
+BRAND = "marianabotelho-ig"
+FAKE_IMAGE = b"\x89PNG-fake"
+
+SATURNO_LONG = (
+    "SATURNO — CHUMBO — BAÇO\n\n"
+    "O peso do tempo. Na alquimia antiga, Saturno regia o chumbo e o baço, o órgão que "
+    "guarda o que ainda não conseguimos digerir. Quando o corpo carrega tristezas antigas, "
+    "o baço sente. O chumbo não é castigo: é a matéria densa que pede paciência, silêncio "
+    "e tempo para se transformar. Cuidar do baço é aprender a soltar devagar, sem pressa, "
+    "o que já não nos serve — e deixar que o tempo faça a sua parte."
+)
+
+
+def _real_png_bytes():
+    buffer = io.BytesIO()
+    Image.new("RGB", (64, 80), "#7a8f5a").save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 def test_load_palette_parses_hex_colors():
-    palette = render.load_palette("marianabotelho-ig")
+    palette = render.load_palette(BRAND)
     assert palette["Fundo (pergaminho)"] == "#efe4d0"
     assert palette["Moldura/estrutura"] == "#83ae37"
+
+
+def test_load_palette_reads_dark_frame_text_colour_and_handle():
+    palette = render.load_palette(BRAND)
+    assert palette["Moldura escura"].startswith("#")
+    assert palette["Texto escuro"].startswith("#")
+    assert palette["Handle"] == "@marianabotelho.pt"
 
 
 def test_contrast_ratio_black_on_white_is_maximal():
@@ -22,19 +52,151 @@ def test_check_contrast_passes_for_dark_text_on_light_background():
     render.check_contrast("body", "#2C1A0E", "#efe4d0")  # should not raise
 
 
-def test_build_slide_html_hero_embeds_image_and_text():
-    image_bytes = b"\x89PNG-fake"
-    html = render.build_slide_html("Ritual matinal", image_bytes, "marianabotelho-ig", "hero")
+def test_brand_card_text_colour_passes_contrast_on_parchment():
+    palette = render.load_palette(BRAND)
+    render.check_contrast("body", palette["Texto escuro"], palette["Fundo (pergaminho)"])
+
+
+# --- heading / body split -------------------------------------------------
+
+def test_split_heading_uses_short_first_paragraph_as_heading():
+    heading, body = render.split_heading("SATURNO — CHUMBO — BAÇO\n\nO peso do tempo.")
+    assert heading == "SATURNO — CHUMBO — BAÇO"
+    assert body == "O peso do tempo."
+
+
+def test_split_heading_handles_windows_newlines_and_extra_blank_lines():
+    heading, body = render.split_heading("Título\r\n\r\n\r\nCorpo do texto.\r\nSegunda linha.")
+    assert heading == "Título"
+    assert body == "Corpo do texto.\nSegunda linha."
+
+
+def test_split_heading_without_blank_line_has_no_heading():
+    assert render.split_heading("Uma frase só.\nOutra linha.") == (None, "Uma frase só.\nOutra linha.")
+
+
+def test_split_heading_long_first_paragraph_is_not_a_heading():
+    first = "a" * 81
+    assert render.split_heading(f"{first}\n\nresto") == (None, f"{first}\n\nresto")
+
+
+def test_split_heading_first_paragraph_of_exactly_80_chars_is_a_heading():
+    first = "a" * 80
+    assert render.split_heading(f"{first}\n\nresto") == (first, "resto")
+
+
+# --- card structure -------------------------------------------------------
+
+def test_card_uses_dark_frame_parchment_panel_and_gold_medallion_from_palette(monkeypatch):
+    monkeypatch.setattr(render, "load_palette", lambda brand_pack: {
+        "Fundo (pergaminho)": "#fafafa", "Moldura escura": "#123456",
+        "Acento dourado": "#abcdef", "Texto escuro": "#010203", "Handle": "@x",
+    })
+    html = render.build_slide_html("Título\n\nCorpo", FAKE_IMAGE, BRAND, "card")
+    assert "background:#123456" in html
+    assert "background:#fafafa" in html
+    assert 'id="medallion"' in html
+    assert "solid #abcdef" in html
+    assert "color:#010203" in html
+    assert base64.b64encode(FAKE_IMAGE).decode() in html
+
+
+def test_card_splits_heading_and_body_into_separate_elements():
+    html = render.build_slide_html(
+        "SATURNO — CHUMBO — BAÇO\n\nO peso do tempo.", FAKE_IMAGE, BRAND, "card",
+    )
+    assert '<h1 id="heading"' in html
+    assert ">SATURNO — CHUMBO — BAÇO</h1>" in html
+    assert ">O peso do tempo.</p>" in html
+    assert "Lora" in html and "Cormorant Garamond" in html
+
+
+def test_card_without_heading_has_no_heading_element():
+    html = render.build_slide_html("Só corpo, sem título.", FAKE_IMAGE, BRAND, "card")
+    assert 'id="heading"' not in html
+    assert ">Só corpo, sem título.</p>" in html
+
+
+def test_card_escapes_text():
+    html = render.build_slide_html("<b>oi</b>", FAKE_IMAGE, BRAND, "card")
+    assert "<b>oi</b>" not in html
+    assert "&lt;b&gt;oi&lt;/b&gt;" in html
+
+
+def test_card_shows_arrow_unless_it_is_the_last_slide():
+    assert 'id="arrow"' in render.build_slide_html("t", FAKE_IMAGE, BRAND, "card", is_last=False)
+    assert 'id="arrow"' not in render.build_slide_html("t", FAKE_IMAGE, BRAND, "card", is_last=True)
+
+
+# --- hero structure -------------------------------------------------------
+
+def test_hero_embeds_image_and_uppercase_title_at_top():
+    html = render.build_slide_html("Ritual matinal", FAKE_IMAGE, BRAND, "hero")
     assert "Ritual matinal" in html
-    assert base64.b64encode(image_bytes).decode() in html
+    assert base64.b64encode(FAKE_IMAGE).decode() in html
+    assert "text-transform:uppercase" in html
+    assert "linear-gradient(to bottom" in html  # top scrim for contrast
 
 
-def test_build_slide_html_card_uses_brand_frame_color():
-    html = render.build_slide_html("3 passos", b"\x89PNG-fake", "marianabotelho-ig", "card")
-    assert "#83ae37" in html
+def test_hero_handle_comes_from_the_brand_pack(monkeypatch):
+    palette = render.load_palette(BRAND)
+    monkeypatch.setattr(render, "load_palette", lambda brand_pack: {**palette, "Handle": "@outra.marca"})
+    html = render.build_slide_html("Título", FAKE_IMAGE, BRAND, "hero")
+    assert "@outra.marca" in html
+    assert "@marianabotelho.pt" not in html
 
 
-def test_build_slide_html_respects_minimum_body_font_size():
-    html = render.build_slide_html("texto", b"\x89PNG-fake", "marianabotelho-ig", "card")
-    expected_px = render.MIN_FONT_PX["body"] / render.DEVICE_SCALE_FACTOR
-    assert f"{expected_px}px" in html
+def test_hero_shows_subtitle_paragraph():
+    html = render.build_slide_html(
+        "Elixir Limpeza\n\nO que é. Para que serve. Como usar.", FAKE_IMAGE, BRAND, "hero",
+    )
+    assert ">Elixir Limpeza</h1>" in html
+    assert ">O que é. Para que serve. Como usar.</p>" in html
+
+
+def test_hero_has_no_arrow():
+    assert 'id="arrow"' not in render.build_slide_html("Título", FAKE_IMAGE, BRAND, "hero")
+
+
+# --- auto-fit, measured in a real browser ---------------------------------
+
+def _render(text, role, is_last=False):
+    fit = {}
+    png = render.render_png(render.build_slide_html(text, _real_png_bytes(), BRAND, role, is_last=is_last), fit=fit)
+    return png, fit
+
+
+def test_short_card_text_uses_the_large_sizes_and_fits():
+    png, fit = _render("O que é?\n\nUm spray de frequência vibracional.", "card")
+    assert Image.open(io.BytesIO(png)).size == (render.OUTPUT_WIDTH, render.OUTPUT_HEIGHT)
+    assert fit["heading_px"] == pytest.approx(render.START_FONT_PX["heading"], abs=0.5)
+    assert fit["body_px"] == pytest.approx(render.START_FONT_PX["body"], abs=0.5)
+    assert fit["overflow"] is False
+
+
+def test_long_card_text_shrinks_but_stays_readable_and_fits():
+    _, fit = _render(SATURNO_LONG, "card")
+    assert fit["body_px"] < render.START_FONT_PX["body"]
+    assert fit["body_px"] >= render.MIN_FONT_PX["body"]
+    assert fit["heading_px"] >= render.MIN_FONT_PX["heading"]
+    assert fit["overflow"] is False
+
+
+def test_very_long_card_text_shrinks_the_medallion_before_going_below_minimum():
+    _, fit = _render(SATURNO_LONG + " " + SATURNO_LONG.split("\n\n")[1], "card")
+    assert fit["body_px"] == pytest.approx(render.MIN_FONT_PX["body"], abs=0.5)
+    assert fit["medallion_pct"] < render.MEDALLION_WIDTH_PCT["start"]
+    assert fit["medallion_pct"] >= render.MEDALLION_WIDTH_PCT["min"]
+
+
+def test_hero_title_fits_in_at_most_three_lines():
+    _, fit = _render("Metais planetários e o corpo\n\nO que é. Para que serve.", "hero")
+    assert fit["hero_title_px"] >= render.MIN_FONT_PX["hero_title"]
+    assert fit["overflow"] is False
+
+
+def test_long_hero_title_shrinks_to_three_lines_without_going_below_minimum():
+    _, fit = _render("Alquimia do corpo: os sete metais planetários e os órgãos", "hero")
+    assert fit["hero_title_px"] < render.START_FONT_PX["hero_title"]
+    assert fit["hero_title_px"] >= render.MIN_FONT_PX["hero_title"]
+    assert fit["overflow"] is False
