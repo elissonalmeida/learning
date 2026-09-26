@@ -148,19 +148,31 @@ def generate_slide_image(
         on_step("generate_image", "done")
 
     folder = ensure_image_folder(conn, idea, images_root, storage_module=storage_module)
-    # Keep the raw image so the layout can be redone later without paying again.
-    _background_path(images_root, folder, slide_index).write_bytes(image_bytes)
+    # Keep the raw image (and the prompt that made it) so the layout can be
+    # redone later without paying again.
+    background = background_path(images_root, folder, slide_index)
+    background.parent.mkdir(exist_ok=True)
+    background.write_bytes(image_bytes)
+    _prompt_path(background).write_text(prompt, encoding="utf-8")
 
-    file_path = _render_slide(
+    file_path, overflow = _render_slide(
         idea, folder, slide_index, slide_role, slide_text, image_bytes, images_root, is_last,
         render_module, on_step,
     )
-    slide_image_id = db.create_slide_image(conn, idea_id, slide_index, prompt, str(file_path), cost)
+    slide_image_id = db.create_slide_image(
+        conn, idea_id, slide_index, prompt, str(file_path), cost, text_overflow=overflow,
+    )
     return db.get_slide_image(conn, slide_image_id)
 
 
-def _background_path(images_root, folder, slide_index):
-    return Path(images_root) / folder / f"slide-{slide_index:02d}-bg.png"
+def background_path(images_root, folder, slide_index):
+    """Where a slide's raw image lives: a _raw subfolder, kept apart from the
+    publishable slides."""
+    return Path(images_root) / folder / "_raw" / f"slide-{slide_index:02d}-bg.png"
+
+
+def _prompt_path(background):
+    return background.with_suffix(".prompt.txt")
 
 
 def _render_slide(
@@ -173,7 +185,8 @@ def _render_slide(
         html = render_module.build_slide_html(
             slide_text, image_bytes, idea["brand_pack"], slide_role, is_last=is_last,
         )
-        png_bytes = render_module.render_png(html)
+        fit = {}
+        png_bytes = render_module.render_png(html, fit=fit)
         file_path = Path(images_root) / folder / f"slide-{slide_index:02d}.png"
         file_path.write_bytes(png_bytes)
     except Exception as e:
@@ -182,7 +195,7 @@ def _render_slide(
         raise
     if on_step:
         on_step("render_image", "done")
-    return file_path
+    return file_path, bool(fit.get("overflow"))
 
 
 def rerender_slide_image(
@@ -192,19 +205,21 @@ def rerender_slide_image(
     """Redo a slide's layout from its saved raw image — no API call, no cost.
     Adds a new pending slide_images row, like "Gerar novamente" does."""
     folder = idea.get("image_folder")
-    background = _background_path(images_root, folder, slide_index) if folder else None
+    background = background_path(images_root, folder, slide_index) if folder else None
     if background is None or not background.is_file():
         raise NoSavedBackgroundError(
             "Ainda não há uma imagem guardada para este slide, por isso não dá para refazer "
             "só o layout. Podes gerar a imagem primeiro e depois refazer à vontade."
         )
-    file_path = _render_slide(
+    file_path, overflow = _render_slide(
         idea, folder, slide_index, slide_role, slide_text, background.read_bytes(), images_root,
         is_last, render_module, on_step,
     )
-    previous = [r for r in db.list_slide_images(conn, idea["id"]) if r["slide_index"] == slide_index]
-    prompt = previous[-1]["prompt"] if previous else ""
-    slide_image_id = db.create_slide_image(conn, idea["id"], slide_index, prompt, str(file_path), 0)
+    prompt_file = _prompt_path(background)
+    prompt = prompt_file.read_text(encoding="utf-8") if prompt_file.is_file() else ""
+    slide_image_id = db.create_slide_image(
+        conn, idea["id"], slide_index, prompt, str(file_path), 0, text_overflow=overflow,
+    )
     return db.get_slide_image(conn, slide_image_id)
 
 

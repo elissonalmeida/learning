@@ -59,6 +59,10 @@ def init_db(conn):
         conn.execute("ALTER TABLE ideas ADD COLUMN image_folder TEXT")
     except sqlite3.OperationalError:
         pass  # column already exists — idempotent migration for pre-v1.1 databases
+    try:
+        conn.execute("ALTER TABLE slide_images ADD COLUMN text_overflow INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # column already exists
     conn.commit()
 
 
@@ -189,11 +193,12 @@ def would_exceed_daily_cap(conn, estimated_call_cost, daily_cap_usd):
     return (get_spend_today(conn) + estimated_call_cost) > daily_cap_usd
 
 
-def create_slide_image(conn, idea_id, slide_index, prompt, file_path, cost_usd):
+def create_slide_image(conn, idea_id, slide_index, prompt, file_path, cost_usd, text_overflow=False):
     cursor = conn.execute(
-        "INSERT INTO slide_images (idea_id, slide_index, prompt, file_path, cost_usd, status, created_at) "
-        "VALUES (?, ?, ?, ?, ?, 'pending', ?)",
-        (idea_id, slide_index, prompt, file_path, cost_usd, _now()),
+        "INSERT INTO slide_images "
+        "(idea_id, slide_index, prompt, file_path, cost_usd, status, created_at, text_overflow) "
+        "VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)",
+        (idea_id, slide_index, prompt, file_path, cost_usd, _now(), int(bool(text_overflow))),
     )
     conn.commit()
     return cursor.lastrowid

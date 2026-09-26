@@ -25,13 +25,15 @@ def make_fake_image_gen(cost=0.07):
     return SimpleNamespace(generate_image=generate_image)
 
 
-def make_fake_render(calls=None):
+def make_fake_render(calls=None, overflow=False):
     def build_slide_html(slide_text, image_bytes, brand_pack, slide_role, is_last=False):
         if calls is not None:
             calls.append({"text": slide_text, "image": image_bytes, "role": slide_role, "is_last": is_last})
         return f"<html>{slide_role}:{slide_text}</html>"
 
-    def render_png(html):
+    def render_png(html, fit=None):
+        if fit is not None:
+            fit["overflow"] = overflow
         return b"fake-png-bytes"
 
     return SimpleNamespace(build_slide_html=build_slide_html, render_png=render_png)
@@ -128,7 +130,7 @@ def test_on_step_reports_error_when_render_fails(conn, idea, tmp_path):
     def failing_render(slide_text, image_bytes, brand_pack, slide_role, is_last=False):
         raise ValueError("contraste insuficiente")
 
-    fake_render = SimpleNamespace(build_slide_html=failing_render, render_png=lambda html: b"x")
+    fake_render = SimpleNamespace(build_slide_html=failing_render, render_png=lambda html, fit=None: b"x")
     events = []
     with pytest.raises(ValueError):
         pipeline.generate_slide_image(
@@ -206,13 +208,16 @@ def test_ensure_image_folder_keeps_overlong_saved_folder_that_already_exists(con
     assert pipeline.ensure_image_folder(conn, idea, tmp_path) == legacy
 
 
-def test_generate_slide_image_keeps_the_raw_image_next_to_the_slide(conn, idea, tmp_path):
+def test_generate_slide_image_keeps_the_raw_image_in_a_raw_subfolder(conn, idea, tmp_path):
     row = pipeline.generate_slide_image(
         None, conn, idea, 3, "card", "texto", "prompt", tmp_path, 2.0,
         image_gen_module=make_fake_image_gen(), render_module=make_fake_render(),
     )
-    background = Path(row["file_path"]).with_name("slide-03-bg.png")
-    assert background.read_bytes() == b"fake-image-bytes"
+    folder = Path(row["file_path"]).parent
+    assert (folder / "_raw" / "slide-03-bg.png").read_bytes() == b"fake-image-bytes"
+    assert pipeline.background_path(tmp_path, folder.name, 3) == folder / "_raw" / "slide-03-bg.png"
+    # Only publishable slides sit in the carousel folder itself.
+    assert sorted(f.name for f in folder.iterdir() if f.is_file()) == ["slide-03.png"]
 
 
 def test_generate_slide_image_passes_is_last_to_the_layout(conn, idea, tmp_path):
@@ -265,3 +270,47 @@ def test_rerender_slide_image_raises_when_folder_exists_but_background_is_missin
             conn, db.get_idea(conn, idea["id"]), 2, "card", "texto", tmp_path, False,
             render_module=make_fake_render(),
         )
+
+
+def test_rerender_uses_the_prompt_that_produced_the_saved_image(conn, idea, tmp_path):
+    pipeline.generate_slide_image(
+        None, conn, idea, 1, "card", "texto", "prompt antigo", tmp_path, 2.0,
+        image_gen_module=make_fake_image_gen(), render_module=make_fake_render(),
+    )
+    idea = db.get_idea(conn, idea["id"])
+
+    def failing_render(slide_text, image_bytes, brand_pack, slide_role, is_last=False):
+        raise ValueError("falhou a compor")
+
+    with pytest.raises(ValueError):
+        pipeline.generate_slide_image(
+            None, conn, idea, 1, "card", "texto", "prompt novo", tmp_path, 2.0,
+            image_gen_module=make_fake_image_gen(),
+            render_module=SimpleNamespace(build_slide_html=failing_render, render_png=None),
+        )
+
+    row = pipeline.rerender_slide_image(
+        conn, idea, 1, "card", "texto", tmp_path, False, render_module=make_fake_render(),
+    )
+    assert row["prompt"] == "prompt novo"
+
+
+@pytest.mark.parametrize("overflow", [True, False])
+def test_generate_slide_image_records_text_overflow(conn, idea, tmp_path, overflow):
+    row = pipeline.generate_slide_image(
+        None, conn, idea, 1, "card", "texto", "prompt", tmp_path, 2.0,
+        image_gen_module=make_fake_image_gen(), render_module=make_fake_render(overflow=overflow),
+    )
+    assert bool(row["text_overflow"]) is overflow
+
+
+def test_rerender_slide_image_records_text_overflow(conn, idea, tmp_path):
+    pipeline.generate_slide_image(
+        None, conn, idea, 1, "card", "texto", "prompt", tmp_path, 2.0,
+        image_gen_module=make_fake_image_gen(), render_module=make_fake_render(),
+    )
+    row = pipeline.rerender_slide_image(
+        conn, db.get_idea(conn, idea["id"]), 1, "card", "texto muito longo", tmp_path, False,
+        render_module=make_fake_render(overflow=True),
+    )
+    assert row["text_overflow"] == 1

@@ -252,7 +252,7 @@ def test_carousel_preview_renders_when_all_slides_approved(tmp_path, monkeypatch
     assert not at.exception
 
 
-def _idea_with_two_slide_images(tmp_path, monkeypatch, with_background_for):
+def _idea_with_two_slide_images(tmp_path, monkeypatch, with_background_for, overflow_for=()):
     db_path = tmp_path / "test.db"
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-not-real")
     monkeypatch.setenv("GEMINI_API_KEY", "gk-test-not-real")
@@ -270,9 +270,12 @@ def _idea_with_two_slide_images(tmp_path, monkeypatch, with_background_for):
     for index in (0, 1):
         slide = folder / f"slide-{index:02d}.png"
         slide.write_bytes(_TINY_PNG_BYTES)
-        db.create_slide_image(conn, idea_id, index, f"prompt {index}", str(slide), 0.05)
+        db.create_slide_image(
+            conn, idea_id, index, f"prompt {index}", str(slide), 0.05, text_overflow=index in overflow_for,
+        )
+    (folder / "_raw").mkdir()
     for index in with_background_for:
-        (folder / f"slide-{index:02d}-bg.png").write_bytes(_TINY_PNG_BYTES)
+        (folder / "_raw" / f"slide-{index:02d}-bg.png").write_bytes(_TINY_PNG_BYTES)
     conn.close()
     return db_path, idea_id
 
@@ -297,7 +300,7 @@ def test_refazer_layout_adds_a_free_new_version_of_the_last_slide(tmp_path, monk
         render, "build_slide_html",
         lambda text, image, brand, role, is_last=False: layouts.append((role, is_last)) or "<html></html>",
     )
-    monkeypatch.setattr(render, "render_png", lambda html: _TINY_PNG_BYTES)
+    monkeypatch.setattr(render, "render_png", lambda html, fit=None: _TINY_PNG_BYTES)
 
     at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
@@ -335,7 +338,7 @@ def test_gerar_imagem_tells_the_layout_which_slide_is_the_last(tmp_path, monkeyp
         render, "build_slide_html",
         lambda text, image, brand, role, is_last=False: layouts.append((text, is_last)) or "<html></html>",
     )
-    monkeypatch.setattr(render, "render_png", lambda html: _TINY_PNG_BYTES)
+    monkeypatch.setattr(render, "render_png", lambda html, fit=None: _TINY_PNG_BYTES)
 
     at = AppTest.from_file(APP_PATH, default_timeout=30)
     at.run()
@@ -344,3 +347,29 @@ def test_gerar_imagem_tells_the_layout_which_slide_is_the_last(tmp_path, monkeyp
 
     assert not at.exception
     assert layouts == [("Slide 2", False), ("Slide 3", True)]
+
+
+def test_background_left_in_the_carousel_folder_does_not_offer_refazer_layout(tmp_path, monkeypatch):
+    _idea_with_two_slide_images(tmp_path, monkeypatch, with_background_for=[])
+    folder = tmp_path / "images" / "2026-09-26_ritual"
+    (folder / "slide-00-bg.png").write_bytes(_TINY_PNG_BYTES)  # old location, not used any more
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    assert not at.exception
+    assert not [b for b in at.button if b.label == "Refazer layout"]
+
+
+def test_gentle_notice_under_a_slide_whose_text_overflows(tmp_path, monkeypatch):
+    import tone_guard
+
+    _idea_with_two_slide_images(tmp_path, monkeypatch, with_background_for=[], overflow_for=[1])
+
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    assert not at.exception
+    notices = [i.value for i in at.info if "um pouco longo" in i.value]
+    assert len(notices) == 1
+    assert tone_guard.find_harsh_words(notices[0]) == []

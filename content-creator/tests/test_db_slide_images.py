@@ -64,3 +64,24 @@ def test_hard_delete_idea_removes_slide_images(conn, idea):
     db.archive_idea(conn, idea["id"])
     db.hard_delete_idea(conn, idea["id"])
     assert db.list_slide_images(conn, idea["id"]) == []
+
+
+def test_init_db_adds_text_overflow_to_an_existing_slide_images_table(tmp_path):
+    connection = db.get_connection(str(tmp_path / "old.db"))
+    connection.execute(
+        "CREATE TABLE slide_images (id INTEGER PRIMARY KEY, idea_id INTEGER NOT NULL, "
+        "slide_index INTEGER NOT NULL, prompt TEXT NOT NULL, file_path TEXT NOT NULL, "
+        "cost_usd REAL NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL)"
+    )
+    connection.execute(
+        "INSERT INTO slide_images (idea_id, slide_index, prompt, file_path, cost_usd, created_at) "
+        "VALUES (1, 0, 'p', 'f.png', 0.07, '2026-09-01')"
+    )
+    db.init_db(connection)
+    db.init_db(connection)  # idempotent
+    assert connection.execute("SELECT text_overflow FROM slide_images").fetchone()[0] == 0
+
+
+def test_create_slide_image_stores_text_overflow(conn, idea):
+    slide_image_id = db.create_slide_image(conn, idea["id"], 0, "p", "f.png", 0.07, text_overflow=True)
+    assert db.get_slide_image(conn, slide_image_id)["text_overflow"] == 1

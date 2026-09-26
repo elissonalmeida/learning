@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import streamlit as st
 
 import ai
@@ -205,6 +203,11 @@ with tab_images:
 
             if existing:
                 st.image(existing["file_path"], width=300)
+                if existing["text_overflow"]:
+                    st.info(
+                        "Este texto é um pouco longo para o slide — se quiseres, encurta-o "
+                        "no rascunho para ficar mais fácil de ler."
+                    )
                 if existing["status"] == "approved":
                     st.success("Aprovado")
                 col1, col2, col3 = st.columns(3)
@@ -214,8 +217,10 @@ with tab_images:
                     st.rerun()
                 if col2.button("Gerar novamente", key=f"regen_{i}"):
                     st.session_state[f"show_prompt_{idea['id']}_{i}"] = True
-                background = Path(existing["file_path"]).with_name(f"slide-{i:02d}-bg.png")
-                if background.is_file() and col3.button(
+                has_background = bool(idea["image_folder"]) and pipeline.background_path(
+                    images_root, idea["image_folder"], i,
+                ).is_file()
+                if has_background and col3.button(
                     "Refazer layout", key=f"rerender_{i}",
                     help="Volta a compor o slide com a mesma imagem, sem custo.",
                 ):
