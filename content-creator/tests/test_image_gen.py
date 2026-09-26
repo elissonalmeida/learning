@@ -96,3 +96,10 @@ def test_image_prompt_keeps_palette_mood_and_botanical_motif():
     assert "#efe4d0" in prompt
     assert "acolhedor" in prompt  # mood keywords
     assert "botânic" in prompt  # botanical motif, as mood
+
+
+def test_card_prompt_asks_for_no_drawn_frame_or_border():
+    # The renderer already frames the image in a gold oval; a frame painted by the
+    # model shows up as a double frame.
+    prompt = image_gen.build_image_prompt("texto", "marianabotelho-ig", "card")
+    assert "sem moldura" in prompt

@@ -64,7 +64,8 @@ def build_image_prompt(slide_text, brand_pack, slide_role):
         framing = (
             "Um único assunto, centrado, com um pouco de espaço à volta: a imagem vai "
             "ser recortada num pequeno medalhão oval, por isso o essencial tem de "
-            "ficar no centro."
+            "ficar no centro. A imagem deve ir até às bordas, sem moldura, sem "
+            "contorno e sem vinheta desenhados: a moldura é acrescentada depois."
         )
     return (
         "Gera uma imagem fotográfica, sem texto nenhum escrito na imagem, que "
