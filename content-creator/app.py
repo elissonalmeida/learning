@@ -1,4 +1,5 @@
 import base64
+import mimetypes
 from pathlib import Path
 
 import streamlit as st
@@ -6,8 +7,10 @@ import streamlit as st
 import ai
 import config
 import db
+import ig_preview
 import image_gen
 import pipeline
+import render
 import storage
 import theme
 
@@ -79,7 +82,8 @@ ENLARGED_KEY = "enlarged_slide"
 
 
 def data_uri(path):
-    return "data:image/png;base64," + base64.b64encode(Path(path).read_bytes()).decode()
+    mime = mimetypes.guess_type(str(path))[0] or "image/png"
+    return f"data:{mime};base64," + base64.b64encode(Path(path).read_bytes()).decode()
 
 
 def open_enlarged(idea_id, slide_index):
@@ -320,21 +324,34 @@ with tab_images:
             if preview_key not in st.session_state:
                 st.session_state[preview_key] = 0
             idx = st.session_state[preview_key]
-            st.image(approved_images[idx]["file_path"], width=400)
-            st.caption(slides[idx])
-            col_prev, col_next = st.columns(2)
-            if col_prev.button("◀ Anterior") and idx > 0:
-                st.session_state[preview_key] -= 1
-                st.rerun()
-            if col_next.button("Seguinte ▶") and idx < len(slides) - 1:
-                st.session_state[preview_key] += 1
-                st.rerun()
-            thumb_cols = st.columns(len(slides))
-            for j, col in enumerate(thumb_cols):
-                if col.button(f"{j + 1}", key=f"thumb_{j}"):
-                    st.session_state[preview_key] = j
+            palette = render.load_palette(cfg.brand_pack)
+            avatar = palette.get("Avatar")  # optional image file in the brand pack folder
+            avatar_path = render.BRANDS_DIR / cfg.brand_pack / avatar if avatar else None
+            with st.container(width=400):
+                st.html(ig_preview.post_html(
+                    data_uri(approved_images[idx]["file_path"]),
+                    palette.get("Handle", cfg.brand_pack),
+                    data_uri(avatar_path) if avatar_path and avatar_path.is_file() else None,
+                    idx, len(slides), latest_draft["caption"],
+                    full_caption=st.session_state.get("full_caption", False),
+                ))
+                col_prev, col_big, col_next = st.columns(3)
+                if col_prev.button("◀ Anterior", width="stretch") and idx > 0:
+                    st.session_state[preview_key] -= 1
                     st.rerun()
-            st.write(f"**Legenda:** {latest_draft['caption']}")
+                col_big.button(
+                    "Ver maior", key="enlarge_preview", icon=":material/zoom_in:", width="stretch",
+                    on_click=open_enlarged, args=(idea["id"], approved_images[idx]["slide_index"]),
+                )
+                if col_next.button("Seguinte ▶", width="stretch") and idx < len(slides) - 1:
+                    st.session_state[preview_key] += 1
+                    st.rerun()
+                thumb_cols = st.columns(len(slides))
+                for j, col in enumerate(thumb_cols):
+                    if col.button(f"{j + 1}", key=f"thumb_{j}", type="primary" if j == idx else "secondary"):
+                        st.session_state[preview_key] = j
+                        st.rerun()
+                st.toggle("Ver legenda completa", key="full_caption")
         else:
             st.info("Aprova todas as imagens para veres a pré-visualização do carrossel.")
 

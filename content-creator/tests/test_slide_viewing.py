@@ -1,6 +1,7 @@
 """#47 (enlarged slide view with an obvious way back) and #49 (Instagram-like
 carousel preview)."""
 import base64
+import re
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
@@ -145,3 +146,81 @@ def test_theme_hides_the_builtin_fullscreen_button_only_on_images():
 
     assert '[data-testid="stElementToolbar"]' in theme.HEADER_CSS
     assert ':has([data-testid="stImage"])' in theme.HEADER_CSS
+
+
+# ---- #49: Instagram-like preview -------------------------------------------
+
+def test_preview_looks_like_an_instagram_post(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    assert not at.exception
+    post = _post(at)
+    assert '<span class="ig-handle">marianabotelho.pt</span>' in post  # Handle from the brand pack
+    assert "<b>marianabotelho.pt</b>" in post  # bold handle before the caption
+    assert "1/3" in post
+    assert post.count('class="ig-dot"') + post.count('class="ig-dot active"') == 3
+    assert post.index('class="ig-dot active"') < post.index('class="ig-dot"')
+    assert _uri(0) in post
+    assert '… <span class="ig-mais">mais</span>' in post
+    assert "FIM-DA-LEGENDA" not in post
+
+
+def test_switching_slide_updates_the_counter_and_the_dot(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    _button(at, label="Seguinte ▶").click().run()
+
+    post = _post(at)
+    assert "2/3" in post
+    assert re.findall(r'class="ig-dot( active)?"', post) == ["", " active", ""]
+    assert _uri(1) in post
+
+    _button(at, key="thumb_2").click().run()
+    assert "3/3" in _post(at)
+
+
+def test_ver_legenda_completa_shows_the_whole_caption(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    at.toggle(key="full_caption").set_value(True).run()
+
+    post = _post(at)
+    assert "FIM-DA-LEGENDA" in post
+    assert '<span class="ig-mais">' not in post
+
+
+def test_preview_ver_maior_opens_the_current_slide(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+    _button(at, label="Seguinte ▶").click().run()
+
+    _button(at, key="enlarge_preview").click().run()
+
+    assert not at.exception
+    assert _uri(1) in _enlarged(at)[0]
+
+
+def test_preview_waits_gently_until_all_slides_are_approved(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch, approve=False)
+    at = AppTest.from_file(APP_PATH, default_timeout=30)
+    at.run()
+
+    assert not [h for h in _htmls(at) if "ig-post" in h]
+    assert any("Aprova todas as imagens" in i.value for i in at.info)
+
+
+def test_avatar_from_the_brand_pack_or_the_handle_initial():
+    import ig_preview
+
+    with_avatar = ig_preview.post_html("data:image/png;base64,AA", "@marca", "data:image/png;base64,AV", 0, 2, "Olá")
+    assert '<div class="ig-avatar"><img src="data:image/png;base64,AV"' in with_avatar
+    without = ig_preview.post_html("data:image/png;base64,AA", "@marca", None, 0, 2, "Olá")
+    assert '<div class="ig-avatar">M</div>' in without
+    assert '<span class="ig-mais">' not in without  # short caption is not cut

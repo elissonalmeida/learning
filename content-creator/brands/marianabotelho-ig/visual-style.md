@@ -18,6 +18,9 @@ de imagem) e por `render.py` (para os templates HTML/CSS).
 ## Identidade
 
 - **Handle:** `@marianabotelho.pt` (aparece em baixo, ao centro, na capa)
+- Avatar (opcional): para a foto redonda da pré-visualização tipo Instagram, junta
+  uma linha **Avatar:** com o nome de uma imagem desta pasta entre crases. Sem ela,
+  aparece a inicial do handle.
 - A moldura oval dos produtos tem escrito "ELIXIR / MARIANA BOTELHO". Esta
   secção nunca é enviada ao modelo de imagem.
 
